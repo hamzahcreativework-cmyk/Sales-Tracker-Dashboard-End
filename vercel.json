@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/calendar", "destination": "/calendar.html" },
+    { "source": "/gacha", "destination": "/gacha.html" },
+    { "source": "/((?!assets|calendar|gacha).*)", "destination": "/index.html" }
+  ]
+}
