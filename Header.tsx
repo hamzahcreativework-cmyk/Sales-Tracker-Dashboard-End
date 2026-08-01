@@ -5,13 +5,17 @@ import type { User } from '@supabase/supabase-js';
 import Notification from './Notification';
 import { NotificationItem } from './types';
 import { ActiveView } from './App';
-import { Resend } from 'resend';
-
 // Start with an empty notifications list; we'll populate from DB and realtime updates
 const initialNotifications: NotificationItem[] = [];
 
-// Initialize Resend (replace 'your-resend-api-key-here' with your actual Resend API key)
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY || '');
+let resend: any = null;
+try {
+    const apiKey = import.meta.env.VITE_RESEND_API_KEY;
+    if (apiKey) {
+        const { Resend } = require('resend');
+        resend = new Resend(apiKey);
+    }
+} catch {}
 
 interface HeaderProps {
     setActiveView: (view: ActiveView) => void;
@@ -309,10 +313,12 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
     };
 
     const sendNotificationEmail = async (notification: NotificationItem) => {
+        if (!resend) {
+            console.warn('Resend not configured — skipping email notification');
+            return;
+        }
         try {
-            // Get director's email - you can fetch from profiles table where role = 'Direktor'
-            // For now, using current user's email if they are director
-            const directorEmail = user?.email || 'financehisjakarta@gmail.com'; // Replace with actual director email fetching logic
+            const directorEmail = user?.email || 'financehisjakarta@gmail.com';
 
             const { data, error } = await resend.emails.send({
                 from: 'admin@kediaman.co', // Replace with your verified domain in Resend
