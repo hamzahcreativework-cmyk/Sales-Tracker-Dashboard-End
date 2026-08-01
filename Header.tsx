@@ -11,7 +11,7 @@ import { Resend } from 'resend';
 const initialNotifications: NotificationItem[] = [];
 
 // Initialize Resend (replace 'your-resend-api-key-here' with your actual Resend API key)
-const resend = new Resend('PLACEHOLDER_RESEND_KEY');
+const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY || '');
 
 interface HeaderProps {
     setActiveView: (view: ActiveView) => void;
