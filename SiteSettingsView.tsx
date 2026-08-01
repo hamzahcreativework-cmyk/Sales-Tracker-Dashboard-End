@@ -20,6 +20,9 @@ const MONTHS_ID = [
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
+const HEADING_FONTS = ['Orbitron', 'Rajdhani', 'Teko', 'Oswald', 'Bebas Neue', 'Russo One', 'Chakra Petch', 'Black Ops One'];
+const BODY_FONTS = ['Poppins', 'Inter', 'Roboto', 'Open Sans', 'Nunito', 'Lato', 'Montserrat', 'DM Sans', 'Quicksand'];
+
 const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
     const [videoUrls, setVideoUrls] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +41,17 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
     const [isUploadingMusic, setIsUploadingMusic] = useState(false);
     const musicFileInputRef = useRef<HTMLInputElement>(null);
     const [youtubeLink, setYoutubeLink] = useState('');
+
+    // Calendar font state
+    const [calendarFonts, setCalendarFonts] = useState({ heading: 'Orbitron', body: 'Poppins' });
+    const [isLoadingFonts, setIsLoadingFonts] = useState(true);
+    const [isSavingFonts, setIsSavingFonts] = useState(false);
+
+    // Logo state
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [isLoadingLogo, setIsLoadingLogo] = useState(true);
+    const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+    const logoFileInputRef = useRef<HTMLInputElement>(null);
 
     // Gacha prize state
     const [gachaPrizes, setGachaPrizes] = useState<GachaPrize[]>([]);
@@ -146,6 +160,64 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
         };
         fetchDateRange();
     }, []);
+
+    useEffect(() => {
+        const fetchFonts = async () => {
+            setIsLoadingFonts(true);
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_fonts')
+                .maybeSingle();
+            if (data?.value) {
+                try {
+                    const parsed = JSON.parse(data.value);
+                    if (parsed && typeof parsed === 'object') {
+                        setCalendarFonts({
+                            heading: parsed.heading ?? 'Orbitron',
+                            body: parsed.body ?? 'Poppins',
+                        });
+                    }
+                } catch {}
+            }
+            setIsLoadingFonts(false);
+        };
+        fetchFonts();
+    }, []);
+
+    useEffect(() => {
+        const fetchLogo = async () => {
+            setIsLoadingLogo(true);
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_logo_url')
+                .maybeSingle();
+            if (data?.value) {
+                setLogoUrl(data.value);
+            }
+            setIsLoadingLogo(false);
+        };
+        fetchLogo();
+    }, []);
+
+    useEffect(() => {
+        const families = [calendarFonts.heading, calendarFonts.body]
+            .filter(Boolean)
+            .map(f => f.replace(/ /g, '+') + ':wght@400;600;700;800;900')
+            .join('&family=');
+        const href = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+
+        const id = 'settings-font-preview';
+        let link = document.getElementById(id) as HTMLLinkElement | null;
+        if (!link) {
+            link = document.createElement('link');
+            link.id = id;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
+        link.href = href;
+    }, [calendarFonts.heading, calendarFonts.body]);
 
     useEffect(() => {
         const fetchPrizes = async () => {
@@ -391,6 +463,108 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
         setIsSavingRange(false);
     };
 
+    const handleSaveFonts = async () => {
+        setIsSavingFonts(true);
+        const { error } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_fonts', value: JSON.stringify(calendarFonts), updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+        if (error) {
+            console.error('Save fonts error:', error);
+            alert('Gagal menyimpan pengaturan font: ' + error.message);
+        } else {
+            alert('Pengaturan font berhasil disimpan.');
+        }
+        setIsSavingFonts(false);
+    };
+
+    const handleUploadLogo = async () => {
+        const file = logoFileInputRef.current?.files?.[0];
+        if (!file) {
+            alert('Pilih file gambar terlebih dahulu.');
+            return;
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Format file tidak didukung. Gunakan JPG, PNG, GIF, WebP, atau SVG.');
+            return;
+        }
+
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            alert('Ukuran file terlalu besar. Maksimal 5MB.');
+            return;
+        }
+
+        setIsUploadingLogo(true);
+
+        const ext = file.name.split('.').pop() || 'png';
+        const fileName = `calendar-logo-${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('site-assets')
+            .upload(fileName, file, { upsert: true });
+
+        if (uploadError) {
+            console.error('Upload error:', uploadError);
+            alert('Gagal mengupload logo: ' + uploadError.message);
+            setIsUploadingLogo(false);
+            return;
+        }
+
+        const { data: urlData } = supabase.storage
+            .from('site-assets')
+            .getPublicUrl(fileName);
+
+        const publicUrl = urlData.publicUrl;
+
+        const { error: saveError } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_logo_url', value: publicUrl, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+
+        if (saveError) {
+            console.error('Save error:', saveError);
+            alert('Gagal menyimpan logo: ' + saveError.message);
+        } else {
+            setLogoUrl(publicUrl);
+            if (logoFileInputRef.current) logoFileInputRef.current.value = '';
+        }
+
+        setIsUploadingLogo(false);
+    };
+
+    const handleRemoveLogo = async () => {
+        if (!window.confirm('Apakah Anda yakin ingin menghapus logo?')) return;
+
+        setIsUploadingLogo(true);
+
+        // Remove from storage
+        if (logoUrl) {
+            const urlParts = logoUrl.split('/site-assets/');
+            if (urlParts.length > 1) {
+                const filePath = decodeURIComponent(urlParts[1]);
+                await supabase.storage.from('site-assets').remove([filePath]);
+            }
+        }
+
+        // Clear the setting
+        await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_logo_url', value: '', updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+
+        setLogoUrl(null);
+        setIsUploadingLogo(false);
+    };
+
     const refreshPrizes = async () => {
         const { data, error } = await supabase
             .from('gacha_prizes')
@@ -516,6 +690,95 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Pengaturan Situs</h1>
                 <p className="text-[var(--color-text-secondary)] mt-1">Kelola pengaturan untuk halaman publik</p>
+            </div>
+
+            {/* Logo Kediaman */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Logo Kediaman</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Upload logo yang akan ditampilkan di header kalender publik (/calendar.html)
+                </p>
+
+                {isLoadingLogo ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* Current logo preview */}
+                        {logoUrl ? (
+                            <div className="flex items-start gap-4">
+                                <div className="shrink-0 rounded-xl overflow-hidden border border-[var(--color-border)] bg-[var(--color-surface)] p-4" style={{ maxWidth: 200 }}>
+                                    <img
+                                        src={logoUrl}
+                                        alt="Logo Kediaman"
+                                        className="max-w-full h-auto object-contain"
+                                        style={{ maxHeight: 120 }}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <p className="text-sm text-[var(--color-text-secondary)]">Logo aktif</p>
+                                    <button
+                                        onClick={handleRemoveLogo}
+                                        disabled={isUploadingLogo}
+                                        className="text-sm text-red-400 hover:text-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Hapus Logo
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-8 text-center">
+                                <svg className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p className="text-[var(--color-text-secondary)]">Belum ada logo</p>
+                                <p className="text-sm text-[var(--color-text-secondary)] mt-1">Upload logo untuk ditampilkan di header kalender</p>
+                            </div>
+                        )}
+
+                        {/* Upload new logo */}
+                        <div className="border-t border-[var(--color-border)] pt-6">
+                            <label className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider block mb-3">
+                                {logoUrl ? 'Ganti Logo' : 'Upload Logo'}
+                            </label>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <input
+                                    ref={logoFileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                                    disabled={isUploadingLogo}
+                                    className="form-input flex-grow py-2 px-3 text-sm file:mr-4 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)] file:text-white hover:file:bg-[var(--color-primary-dark)] file:cursor-pointer"
+                                />
+                                <button
+                                    onClick={handleUploadLogo}
+                                    disabled={isUploadingLogo}
+                                    className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                >
+                                    {isUploadingLogo ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            <span>Mengupload...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                            </svg>
+                                            <span>Upload</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                            <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+                                Format: JPG, PNG, GIF, WebP, SVG. Maksimal 5MB. Rekomendasi: latar belakang transparan (PNG/SVG).
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="card p-6">
@@ -721,6 +984,92 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                                 className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSavingRange ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <span>Menyimpan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Simpan</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Calendar Font Settings */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Font Kalender</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Atur font heading dan body untuk halaman kalender publik
+                </p>
+
+                {isLoadingFonts ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {/* Heading font */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0">Font Heading</label>
+                            <select
+                                value={calendarFonts.heading}
+                                onChange={e => setCalendarFonts(prev => ({ ...prev, heading: e.target.value }))}
+                                disabled={isSavingFonts}
+                                className="form-select py-2 px-3 text-sm w-full sm:w-64"
+                            >
+                                {HEADING_FONTS.map(f => (
+                                    <option key={f} value={f}>{f}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Body font */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0">Font Body</label>
+                            <select
+                                value={calendarFonts.body}
+                                onChange={e => setCalendarFonts(prev => ({ ...prev, body: e.target.value }))}
+                                disabled={isSavingFonts}
+                                className="form-select py-2 px-3 text-sm w-full sm:w-64"
+                            >
+                                {BODY_FONTS.map(f => (
+                                    <option key={f} value={f}>{f}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Font preview */}
+                        <div className="border border-[var(--color-border)] rounded-xl p-4 bg-[var(--color-surface)]">
+                            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Preview</p>
+                            <div className="space-y-2">
+                                <p style={{ fontFamily: `'${calendarFonts.heading}', monospace`, fontSize: 20, fontWeight: 700 }} className="text-[var(--color-text-primary)]">
+                                    LIVE CALENDAR — HEADING FONT
+                                </p>
+                                <p style={{ fontFamily: `'${calendarFonts.body}', sans-serif`, fontSize: 14 }} className="text-[var(--color-text-secondary)]">
+                                    Ini adalah contoh teks body yang akan tampil di halaman kalender publik. The quick brown fox jumps over the lazy dog.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Current info */}
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            Font saat ini: Heading = {calendarFonts.heading}, Body = {calendarFonts.body}
+                        </p>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={handleSaveFonts}
+                                disabled={isSavingFonts}
+                                className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingFonts ? (
                                     <>
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                                         <span>Menyimpan...</span>

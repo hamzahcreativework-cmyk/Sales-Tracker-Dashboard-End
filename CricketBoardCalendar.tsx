@@ -47,8 +47,8 @@ const S = {
     white:   '#E8F5E9',
     red:     '#FF4444',
     glow:    '0 0 10px rgba(255,215,0,0.3)',
-    orbitron: { fontFamily: "'Orbitron', monospace" } as React.CSSProperties,
-    poppins:  { fontFamily: "'Poppins', sans-serif" } as React.CSSProperties,
+    orbitron: { fontFamily: "var(--font-heading, 'Orbitron', monospace)" } as React.CSSProperties,
+    poppins:  { fontFamily: "var(--font-body, 'Poppins', sans-serif)" } as React.CSSProperties,
 };
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -1307,6 +1307,9 @@ const CricketBoardCalendar: React.FC = () => {
         startMonth: number; startYear: number; endMonth: number; endYear: number;
     } | null>(null);
     const [allVenueNames, setAllVenueNames] = useState<string[]>([]);
+    const [headingFont, setHeadingFont] = useState('Orbitron');
+    const [bodyFont, setBodyFont] = useState('Poppins');
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     // Fetch all venue names
     useEffect(() => {
@@ -1458,6 +1461,85 @@ const CricketBoardCalendar: React.FC = () => {
         return () => { supabase.removeChannel(channel); };
     }, []);
 
+    // Fetch font settings from site_settings
+    useEffect(() => {
+        const fetchFonts = async () => {
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_fonts')
+                .maybeSingle();
+            if (data?.value) {
+                try {
+                    const parsed = JSON.parse(data.value);
+                    if (parsed.heading) setHeadingFont(parsed.heading);
+                    if (parsed.body) setBodyFont(parsed.body);
+                } catch { /* ignore */ }
+            }
+        };
+        fetchFonts();
+
+        const channel = supabase
+            .channel('calendar-font-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new?.key === 'calendar_fonts') {
+                    try {
+                        const parsed = JSON.parse(payload.new.value || '{}');
+                        if (parsed.heading) setHeadingFont(parsed.heading);
+                        if (parsed.body) setBodyFont(parsed.body);
+                    } catch { /* ignore */ }
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Fetch logo from site_settings
+    useEffect(() => {
+        const fetchLogo = async () => {
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_logo_url')
+                .maybeSingle();
+            if (data?.value) {
+                setLogoUrl(data.value);
+            }
+        };
+        fetchLogo();
+
+        const channel = supabase
+            .channel('calendar-logo-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new?.key === 'calendar_logo_url') {
+                    setLogoUrl(payload.new.value || null);
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Dynamically load Google Fonts when heading/body fonts change
+    useEffect(() => {
+        const families = [headingFont, bodyFont]
+            .filter(Boolean)
+            .map(f => f.replace(/ /g, '+') + ':wght@300;400;500;600;700;800;900')
+            .join('&family=');
+        const href = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+
+        const id = 'dynamic-calendar-fonts';
+        let link = document.getElementById(id) as HTMLLinkElement | null;
+        if (!link) {
+            link = document.createElement('link');
+            link.id = id;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
+        link.href = href;
+    }, [headingFont, bodyFont]);
+
     // ── Calendar grid helpers ──────────────────────────────────────────────
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0=Sun
@@ -1573,7 +1655,15 @@ const CricketBoardCalendar: React.FC = () => {
     };
 
     return (
-        <div style={{ ...S.bg, minHeight: '100vh', ...S.poppins, position: 'relative', overflow: 'hidden' }}>
+        <div style={{
+            ...S.bg,
+            minHeight: '100vh',
+            ...S.poppins,
+            position: 'relative',
+            overflow: 'hidden',
+            '--font-heading': `'${headingFont}', monospace`,
+            '--font-body': `'${bodyFont}', sans-serif`,
+        } as React.CSSProperties}>
 
             {/* Video Background (calendar mode only — compact has its own video panel) */}
             {bgVideoUrls.length > 0 && viewMode === 'calendar' && (
@@ -1612,31 +1702,21 @@ const CricketBoardCalendar: React.FC = () => {
                 position: 'relative',
                 zIndex: 1,
             }}>
-                {/* Title + LIVE indicator */}
+                {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{
-                        ...S.orbitron,
-                        color: S.gold,
-                        fontSize: 'clamp(18px, 4vw, 28px)',
-                        fontWeight: 900,
-                        textShadow: S.glow,
-                        letterSpacing: '0.12em',
-                    }}>
-                        LIVE CALENDAR
-                    </div>
-                    {/* Pulsing LIVE badge */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{
-                            display: 'inline-block',
-                            width: 9,
-                            height: 9,
-                            borderRadius: '50%',
-                            backgroundColor: S.red,
-                            boxShadow: `0 0 8px ${S.red}`,
-                            animation: 'cricketPulse 1.2s ease-in-out infinite',
-                        }} />
-                        <span style={{ ...S.orbitron, color: S.red, fontSize: 11, fontWeight: 700, letterSpacing: '0.1em' }}>LIVE</span>
-                    </div>
+                    {logoUrl && (
+                        <img
+                            src={logoUrl}
+                            alt="Logo"
+                            style={{
+                                height: 48,
+                                width: 'auto',
+                                objectFit: 'contain',
+                                flexShrink: 0,
+                                filter: 'drop-shadow(0 0 6px rgba(255,215,0,0.3))',
+                            }}
+                        />
+                    )}
                 </div>
 
                 {/* Mode toggle + Clock */}
@@ -2026,8 +2106,6 @@ const CricketBoardCalendar: React.FC = () => {
 
             {/* ── KEYFRAME ANIMATION ───────────────────────────────────── */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@400;500;600;700&display=swap');
-
                 @keyframes cricketPulse {
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50%       { opacity: 0.3; transform: scale(0.85); }
