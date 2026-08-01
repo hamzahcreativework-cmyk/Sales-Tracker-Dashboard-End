@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarEventEntry, DealingEntry, EventStatus, MarketingPerson, UserRole, WeddingType, BookingStatus } from './types';
 import { CloseIcon, TrashIcon } from './Icons';
 import { supabase } from './supabaseClient';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import { dateUtils } from './dateUtils';
 
 interface EventDetailModalProps {
@@ -14,6 +14,7 @@ interface EventDetailModalProps {
 }
 
 const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onUpdate, onDelete, userRole }) => {
+    const { venues: VENUES } = useVenues();
     const [formData, setFormData] = useState<Omit<DealingEntry, 'id' | 'totalPax'> & { totalPax: number | ''; waktuAcara?: string } >({
         namaClient: event.eventName,
         namaVenue: event.venueName,

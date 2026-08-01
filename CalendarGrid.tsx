@@ -10,6 +10,20 @@ interface CalendarGridProps {
     onEventClick: (event: CalendarEventEntry) => void;
 }
 
+const VENUE_COLORS = [
+    '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1',
+    '#14B8A6', '#F97316', '#06B6D4', '#F43F5E',
+    '#10B981', '#F59E0B', '#7C3AED'
+];
+
+const getVenueColor = (venueName: string): string => {
+    let hash = 0;
+    for (let i = 0; i < venueName.length; i++) {
+        hash = venueName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return VENUE_COLORS[Math.abs(hash) % VENUE_COLORS.length];
+};
+
 const getEventStatusStyles = (status: EventStatus): { border: string; bg: string; text: string; } => {
     switch (status) {
         case 'Confirmed':
@@ -25,6 +39,14 @@ const getEventStatusStyles = (status: EventStatus): { border: string; bg: string
     }
 };
 
+const TimeIcon: React.FC<{ waktuAcara: CalendarEventEntry['waktuAcara'] }> = ({ waktuAcara }) => (
+    <span className="flex-shrink-0 w-4 h-4 text-[var(--color-text-secondary)]">
+        {waktuAcara === 'Pagi' && <WaktuPagiIcon className="w-4 h-4" />}
+        {waktuAcara === 'Malam' && <WaktuMalamIcon className="w-4 h-4" />}
+        {waktuAcara === 'Full Day' && <WaktuFullDayIcon className="w-4 h-4" />}
+    </span>
+);
+
 const MoreEventsModal: React.FC<{
     date: Date;
     events: CalendarEventEntry[];
@@ -32,31 +54,44 @@ const MoreEventsModal: React.FC<{
     onEventClick: (event: CalendarEventEntry) => void;
 }> = ({ date, events, onClose, onEventClick }) => {
     const formattedDate = date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[51] fade-in" onClick={onClose}>
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-md w-full p-6 relative border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-1">Semua Event</h3>
                 <p className="text-sm text-[var(--color-text-secondary)] mb-4">{formattedDate}</p>
-                 <button onClick={onClose} className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                <button onClick={onClose} className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
                     <CloseIcon className="w-5 h-5" />
                 </button>
                 <div className="max-h-80 overflow-y-auto space-y-2 pr-2 -mr-2">
                     {events.map(event => {
                         const styles = getEventStatusStyles(event.status);
+                        const venueColor = getVenueColor(event.venueName || '');
                         return (
-                             <button
+                            <button
                                 key={event.id}
                                 onClick={() => {
                                     onEventClick(event);
                                     onClose();
                                 }}
-                                className={`w-full text-left p-3 rounded-lg flex flex-col transition-colors border-l-4 ${styles.border} ${styles.bg} hover:bg-opacity-20`}
+                                className={`w-full text-left p-3 rounded-lg flex flex-col gap-1 transition-colors border-l-4 ${styles.border} ${styles.bg} hover:bg-opacity-20`}
                             >
-                                <p className={`font-semibold text-sm ${styles.text}`}>{event.eventOrder || 1}. {event.eventName}</p>
-                                <p className="text-xs text-[var(--color-text-secondary)] mt-1">{event.venueName} - {event.paxCount} pax</p>
+                                <div className="flex items-center gap-2">
+                                    <TimeIcon waktuAcara={event.waktuAcara} />
+                                    <p className={`font-semibold text-sm truncate ${styles.text}`}>{event.eventOrder || 1}. {event.eventName}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5 pl-6">
+                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }} />
+                                    <p className="text-xs text-[var(--color-text-secondary)] truncate">{event.venueName}</p>
+                                    {event.paxCount && (
+                                        <span className="text-xs text-[var(--color-text-secondary)] flex-shrink-0">· {event.paxCount} pax</span>
+                                    )}
+                                </div>
+                                {event.marketingName && (
+                                    <p className="text-xs text-[var(--color-text-secondary)] pl-6 truncate">{event.marketingName}</p>
+                                )}
                             </button>
-                        )
+                        );
                     })}
                 </div>
             </div>
@@ -77,7 +112,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, events, onDate
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
     const daysInMonth = lastDayOfMonth.getDate();
-    const startDayOfWeek = firstDayOfMonth.getDay(); // 0 for Sunday
+    const startDayOfWeek = firstDayOfMonth.getDay();
 
     const calendarDays = [];
     for (let i = 0; i < startDayOfWeek; i++) {
@@ -107,29 +142,39 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, events, onDate
                     const dateString = dateUtils.toLocalDateString(date);
                     const eventsForDay = events.filter(e => e.eventDate === dateString);
                     const isToday = dateUtils.toLocalDateString(date) === dateUtils.getTodayString();
-                    
+
                     const eventsToDisplay = eventsForDay
                         .sort((a, b) => (a.eventOrder || 1) - (b.eventOrder || 1))
                         .slice(0, MAX_EVENTS_PER_DAY);
                     const hiddenEventsCount = eventsForDay.length - MAX_EVENTS_PER_DAY;
 
                     return (
-                        <div 
-                            key={index} 
+                        <div
+                            key={index}
                             className={`relative min-h-[140px] p-2 flex flex-col border-r border-b border-[var(--color-border)] transition-colors duration-200 group ${isCurrentMonth ? 'bg-[var(--color-surface)] hover:bg-[var(--color-interactive)]' : 'bg-slate-50'}`}
                             onClick={() => onDateClick(date)}
                             role="button"
                             aria-label={`Tambah event untuk ${date.toLocaleDateString('id-ID')}`}
                         >
-                            <span className={`self-end text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
-                                isToday ? "bg-[var(--color-primary)] text-white" : 
-                                isCurrentMonth ? "text-[var(--color-text-primary)]" : "text-gray-400"
-                            }`}>
-                                {date.getDate()}
-                            </span>
-                            <div className="flex-grow space-y-1.5 mt-1">
-                                {eventsToDisplay.map((event, index) => {
+                            <div className="flex items-center justify-between mb-1">
+                                {eventsForDay.length > 0 ? (
+                                    <span className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-[var(--color-primary)] text-white">
+                                        {eventsForDay.length}
+                                    </span>
+                                ) : (
+                                    <span />
+                                )}
+                                <span className={`text-xs font-semibold flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                                    isToday ? "bg-[var(--color-primary)] text-white" :
+                                    isCurrentMonth ? "text-[var(--color-text-primary)]" : "text-gray-400"
+                                }`}>
+                                    {date.getDate()}
+                                </span>
+                            </div>
+                            <div className="flex-grow space-y-1.5">
+                                {eventsToDisplay.map((event) => {
                                     const styles = getEventStatusStyles(event.status);
+                                    const venueColor = getVenueColor(event.venueName || '');
                                     return (
                                         <button
                                             key={event.id}
@@ -138,13 +183,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, events, onDate
                                             title={`${event.eventOrder || 1}. ${event.eventName} - ${event.venueName}`}
                                             aria-label={`Lihat detail untuk ${event.eventName}`}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <span className="flex-shrink-0 w-4 h-4 text-[var(--color-text-secondary)]">
-                                                    {event.waktuAcara === 'Pagi' && <WaktuPagiIcon className="w-4 h-4" />}
-                                                    {event.waktuAcara === 'Malam' && <WaktuMalamIcon className="w-4 h-4" />}
-                                                    {event.waktuAcara === 'Full Day' && <WaktuFullDayIcon className="w-4 h-4" />}
-                                                </span>
+                                            <div className="flex items-center gap-1.5">
+                                                <TimeIcon waktuAcara={event.waktuAcara} />
                                                 <p className="truncate">{event.eventOrder || 1}. {event.eventName}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1 mt-0.5 pl-[22px]">
+                                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }} />
+                                                <p className="truncate text-[10px] font-normal text-[var(--color-text-secondary)]">{event.venueName}</p>
+                                                {event.paxCount && (
+                                                    <span className="flex-shrink-0 text-[10px] font-normal text-[var(--color-text-secondary)]">· {event.paxCount} pax</span>
+                                                )}
                                             </div>
                                         </button>
                                     );

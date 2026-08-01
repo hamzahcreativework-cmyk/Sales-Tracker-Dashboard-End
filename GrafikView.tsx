@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import { OptionStatus, LaporanDatabaseEntry, MarketingPerson, UserRole } from './types';
 import { PdfIcon, CsvIcon, WarningIcon } from './Icons';
 import { supabase } from './supabaseClient';
@@ -115,6 +115,7 @@ interface GrafikViewProps {
 }
 
 const GrafikView: React.FC<GrafikViewProps> = ({ userRole, assignedVenue }) => {
+    const { venues: VENUES } = useVenues();
     const [selectedVenue, setSelectedVenue] = useState<string>(assignedVenue || VENUES[0]?.name || '');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');

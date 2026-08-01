@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { DealingEntry, DealComment, UserRole, MarketingPerson, WeddingType } from './types';
 import { CloseIcon, TrashIcon, UserCircleIcon } from './Icons';
 import { supabase } from './supabaseClient';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import type { User } from '@supabase/supabase-js';
 
 interface DealDetailModalProps {
@@ -26,6 +26,7 @@ const STATUS_MAP: Record<DealingEntry['completion_status'], { label: string, col
 };
 
 const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDealUpdate, onDealDelete, userRole }) => {
+    const { venues: VENUES } = useVenues();
     const [formData, setFormData] = useState<DealingEntry>(deal);
     const [comments, setComments] = useState<DealComment[]>([]);
     const [newComment, setNewComment] = useState('');

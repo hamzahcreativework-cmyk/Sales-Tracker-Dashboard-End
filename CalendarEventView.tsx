@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CalendarEventEntry, UserRole, DealingEntry, EventStatus, BookingStatus } from './types';
-import { PlusIcon, GridIcon, ListIcon } from './Icons';
+import { PlusIcon, GridIcon, ListIcon, CloseIcon } from './Icons';
 import AddEventModal from './AddEventModal';
 import { supabase } from './supabaseClient';
 import CalendarGrid from './CalendarGrid';
 import EventDetailModal from './EventDetailModal';
 import { ActiveView } from './App';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import AgendaView from './AgendaView';
 import { dateUtils } from './dateUtils';
 
@@ -18,7 +18,22 @@ interface CalendarEventViewProps {
     selectedEventId?: number;
 }
 
+const VENUE_COLORS = [
+    '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1',
+    '#14B8A6', '#F97316', '#06B6D4', '#F43F5E',
+    '#10B981', '#F59E0B', '#7C3AED'
+];
+
+const getVenueColor = (venueName: string): string => {
+    let hash = 0;
+    for (let i = 0; i < venueName.length; i++) {
+        hash = venueName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return VENUE_COLORS[Math.abs(hash) % VENUE_COLORS.length];
+};
+
 const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueName, setActiveView, assignedVenue, selectedEventId }) => {
+    const { venues: VENUES } = useVenues();
     const [eventsForGrid, setEventsForGrid] = useState<CalendarEventEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
@@ -28,6 +43,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
     const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
     const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | ''>('');
     const [selectedWeek, setSelectedWeek] = useState<number | ''>('');
+    const [selectedVenuePopup, setSelectedVenuePopup] = useState<string | null>(null);
     const fetchRequestIdRef = useRef(0);
     
     const isVenueRestricted = userRole === 'User' && !!assignedVenue;
@@ -126,18 +142,15 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
     const filteredEvents = useMemo(() => {
         let filtered = eventsForGrid;
 
-        // Apply date filter based on view mode and filters
-        if (selectedWeek && viewMode === 'agenda') {
-            // When week filter is active in agenda view, show all events in the selected month
+        if (viewMode === 'month') {
+            // Month view: show events for the currently viewed month
             filtered = filtered.filter(event => {
                 const eventDate = dateUtils.parseLocalDate(event.eventDate);
                 return eventDate.getMonth() === currentDate.getMonth() &&
                        eventDate.getFullYear() === currentDate.getFullYear();
             });
-        } else {
-            // Default: show only future events
-            filtered = filtered.filter(event => dateUtils.isTodayOrFuture(event.eventDate));
         }
+        // Agenda view: show ALL events (past + future) without month restriction
 
         filtered = filtered.sort((a, b) => {
             const dateCompare = a.eventDate.localeCompare(b.eventDate);
@@ -243,6 +256,53 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             {children}
         </button>
     );
+
+    const monthlyStats = useMemo(() => {
+        const monthEvents = eventsForGrid.filter(event => {
+            const eventDate = dateUtils.parseLocalDate(event.eventDate);
+            return eventDate.getMonth() === currentDate.getMonth() &&
+                   eventDate.getFullYear() === currentDate.getFullYear();
+        });
+        return {
+            total: monthEvents.length,
+            softBooking: monthEvents.filter(e => e.jenisBooking === 'Soft Booking').length,
+            booking: monthEvents.filter(e => e.jenisBooking === 'Booking').length,
+            waitingList: monthEvents.filter(e => e.jenisBooking === 'Waiting List').length,
+            dp: monthEvents.filter(e => e.jenisBooking === 'DP').length,
+            lunas: monthEvents.filter(e => e.jenisBooking === 'Lunas').length,
+        };
+    }, [eventsForGrid, currentDate]);
+
+    const venueEventCounts = useMemo(() => {
+        const monthEvents = eventsForGrid.filter(event => {
+            const eventDate = dateUtils.parseLocalDate(event.eventDate);
+            return eventDate.getMonth() === currentDate.getMonth() &&
+                   eventDate.getFullYear() === currentDate.getFullYear();
+        });
+        const counts: Record<string, number> = {};
+        monthEvents.forEach(event => {
+            if (event.venueName) {
+                counts[event.venueName] = (counts[event.venueName] || 0) + 1;
+            }
+        });
+        return counts;
+    }, [eventsForGrid, currentDate]);
+
+    const venuePopupEvents = useMemo(() => {
+        if (!selectedVenuePopup) return [];
+        return eventsForGrid
+            .filter(event => {
+                const eventDate = dateUtils.parseLocalDate(event.eventDate);
+                return event.venueName === selectedVenuePopup &&
+                    eventDate.getMonth() === currentDate.getMonth() &&
+                    eventDate.getFullYear() === currentDate.getFullYear();
+            })
+            .sort((a, b) => {
+                const dateCompare = a.eventDate.localeCompare(b.eventDate);
+                if (dateCompare !== 0) return dateCompare;
+                return (a.eventOrder || 1) - (b.eventOrder || 1);
+            });
+    }, [selectedVenuePopup, eventsForGrid, currentDate]);
 
     // Always hide DP and Lunas filters in Calendar Event view per request.
     const bookingStatuses = React.useMemo(() => {
@@ -368,6 +428,40 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                 </div>
 
 
+                <div className="mb-4 px-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="font-semibold text-[var(--color-text-primary)] mr-1">Total Event Bulan Ini:</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-[var(--color-primary)] text-white font-bold text-xs">{monthlyStats.total}</span>
+                        <span className="text-[var(--color-border)] select-none">|</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300 font-semibold text-xs">Soft Booking: {monthlyStats.softBooking}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-300 font-semibold text-xs">Booking: {monthlyStats.booking}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-300 font-semibold text-xs">Waiting List: {monthlyStats.waitingList}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300 font-semibold text-xs">DP: {monthlyStats.dp}</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold text-xs">Lunas: {monthlyStats.lunas}</span>
+                    </div>
+                    {!effectiveVenueName && VENUES.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {VENUES.map(v => {
+                                const count = venueEventCounts[v.name] || 0;
+                                const venueColor = getVenueColor(v.name);
+                                return (
+                                    <button
+                                        key={v.name}
+                                        onClick={() => setSelectedVenuePopup(v.name)}
+                                        className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-interactive)] hover:border-[var(--color-interactive-hover)] transition-all duration-200 cursor-pointer group"
+                                    >
+                                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform" style={{ backgroundColor: venueColor }}></span>
+                                        <span className="group-hover:text-[var(--color-text-primary)] transition-colors">{v.name}</span>
+                                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center transition-transform group-hover:scale-110" style={{ backgroundColor: venueColor, color: 'white' }}>
+                                            {count}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
                 <h2 className="text-xl font-bold text-[var(--color-text-primary)] text-center mb-4">
                     {monthYearFormat.format(currentDate)}
                 </h2>
@@ -414,6 +508,82 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                     onDelete={handleEventDelete}
                     userRole={userRole}
                 />
+            )}
+
+            {selectedVenuePopup && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[51] fade-in" onClick={() => setSelectedVenuePopup(null)}>
+                    <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-lg w-full relative border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-[var(--color-border)]">
+                            <div className="flex items-center gap-3">
+                                <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: getVenueColor(selectedVenuePopup) }}></span>
+                                <div>
+                                    <h3 className="text-lg font-bold text-[var(--color-text-primary)]">{selectedVenuePopup}</h3>
+                                    <p className="text-sm text-[var(--color-text-secondary)]">
+                                        {venuePopupEvents.length} event di {monthYearFormat.format(currentDate)}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedVenuePopup(null)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                                <CloseIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="max-h-96 overflow-y-auto p-4">
+                            {venuePopupEvents.length === 0 ? (
+                                <p className="text-center text-[var(--color-text-secondary)] py-8 text-sm">
+                                    Tidak ada event untuk venue ini di bulan ini.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {venuePopupEvents.map(event => {
+                                        const eventDate = dateUtils.parseLocalDate(event.eventDate);
+                                        const formattedDate = eventDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+                                        const statusColor = event.jenisBooking === 'Booking' || event.jenisBooking === 'Lunas'
+                                            ? 'bg-green-500/10 border-green-500 text-green-800'
+                                            : event.jenisBooking === 'Waiting List'
+                                            ? 'bg-gray-500/10 border-gray-500 text-gray-800'
+                                            : 'bg-yellow-500/10 border-yellow-500 text-yellow-800';
+                                        return (
+                                            <button
+                                                key={event.id}
+                                                onClick={() => {
+                                                    setSelectedVenuePopup(null);
+                                                    handleEventClick(event);
+                                                }}
+                                                className={`w-full text-left p-3 rounded-lg border-l-4 transition-colors hover:bg-opacity-30 ${statusColor}`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-semibold text-sm truncate flex-1">{event.eventOrder || 1}. {event.eventName}</p>
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--color-interactive)] text-[var(--color-text-secondary)] ml-2 flex-shrink-0">
+                                                        {event.jenisBooking}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-secondary)]">
+                                                    <span>{formattedDate}</span>
+                                                    {event.waktuAcara && <span>· {event.waktuAcara}</span>}
+                                                    {event.paxCount > 0 && <span>· {event.paxCount} pax</span>}
+                                                    {event.marketingName && <span>· {event.marketingName}</span>}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-[var(--color-border)]">
+                            <button
+                                onClick={() => {
+                                    setSelectedVenuePopup(null);
+                                    setActiveView({ type: 'CalendarEvent', venueName: selectedVenuePopup });
+                                }}
+                                className="w-full py-2.5 px-4 text-sm font-semibold rounded-lg bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] transition-colors"
+                            >
+                                Lihat Kalender {selectedVenuePopup}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

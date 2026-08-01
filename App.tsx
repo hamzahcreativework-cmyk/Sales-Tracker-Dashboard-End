@@ -8,6 +8,7 @@ import { supabase } from './supabaseClient';
 import { LaporanDatabaseEntry, UserRole } from './types';
 import type { User } from '@supabase/supabase-js';
 import ImagePreviewModal from './ImagePreviewModal';
+import { VenueProvider } from './VenueContext';
 
 export type ActiveView =
     | { type: 'Dashboard' }
@@ -19,7 +20,9 @@ export type ActiveView =
     | { type: 'Marketing' }
     | { type: 'LaporanBitrix' }
     | { type: 'EventCounting' }
-    | { type: 'Profile' };
+    | { type: 'Profile' }
+    | { type: 'Leaderboard' }
+    | { type: 'SiteSettings' };
 
 export interface LaporanModalInfo {
     venue: string;
@@ -255,6 +258,7 @@ const App: React.FC = () => {
     }
 
     return (
+        <VenueProvider>
         <div className="grid grid-cols-1 lg:grid-cols-[16rem,1fr] w-full max-w-screen-2xl mx-auto p-2 sm:p-3 md:p-4 lg:p-6 gap-2 sm:gap-3 md:gap-4 lg:gap-6 transition-all duration-300 min-h-screen">
             <Sidebar
                 isOpen={isSidebarOpen}
@@ -300,6 +304,7 @@ const App: React.FC = () => {
                 />
             )}
         </div>
+        </VenueProvider>
     );
 };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ManagedUser, UserRole } from './types';
 import { CloseIcon } from './Icons';
 import type { User } from '@supabase/supabase-js';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 
 
 interface EditUserModalProps {
@@ -15,6 +15,7 @@ interface EditUserModalProps {
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, user, isSaving, currentUser }) => {
+    const { venues: VENUES } = useVenues();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [role, setRole] = useState<UserRole>('User');

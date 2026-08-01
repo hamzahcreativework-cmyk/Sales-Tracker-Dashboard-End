@@ -3,8 +3,9 @@ import { ActiveView, LaporanModalInfo } from './App';
 import Header from './Header';
 import GrafikView from './GrafikView';
 import ManagemenUserView from './ManagemenUserView';
-import { VENUES } from './constants';
 import { Venue, MarketingPerson, DealingEntry, UserRole, EventStatus, BookingStatus } from './types';
+import { useVenues } from './VenueContext';
+import AddVenueModal from './AddVenueModal';
 import { PlusIcon, ExcelIcon, TrashIcon, EditIcon, PdfIcon, CsvIcon, CalendarIcon, CloseIcon, FilterIcon, ListIcon, GridIcon, TasksIcon, TeamIcon, SuccessIcon } from './Icons';
 import AddEmployeeModal from './AddEmployeeModal';
 import AddDealModal from './AddDealModal';
@@ -19,6 +20,8 @@ import { dateUtils } from './dateUtils';
 import MarketingView from './MarketingView';
 import LaporanBitrixView from './LaporanBitrixView';
 import EventCountingView from './EventCountingView';
+import LeaderboardView from './LeaderboardView';
+import SiteSettingsView from './SiteSettingsView';
 
 
 interface MainContentProps {
@@ -58,6 +61,9 @@ const formatDateRelative = (dateString: string) => {
     }
     if (diffDays === 1) {
         return 'Besok';
+    }
+    if (diffDays === -1) {
+        return 'Kemarin';
     }
     return dateUtils.formatForDisplay(eventDate);
 };
@@ -110,6 +116,7 @@ const BookingDonutChart: React.FC<{ booked: number, available: number }> = ({ bo
 };
 
 const MonthlyBookingStatus: React.FC<{ userRole: UserRole; assignedVenue: string | null; }> = ({ userRole, assignedVenue }) => {
+    const { venues } = useVenues();
     const currentYear = new Date().getFullYear();
     const [stats, setStats] = useState({ booked: 0, total: 0 });
     const [bookingStats, setBookingStats] = useState<Record<string, number>>({});
@@ -236,7 +243,7 @@ const MonthlyBookingStatus: React.FC<{ userRole: UserRole; assignedVenue: string
                         disabled={isVenueRestricted}
                     >
                         <option value="">Semua Venue</option>
-                        {VENUES.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+                        {venues.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
                     </select>
                 </div>
             </div>
@@ -308,12 +315,10 @@ const UpcomingEvents: React.FC<UpcomingEventsProps> = ({ setActiveView, userRole
     useEffect(() => {
         const fetchUpcomingEvents = async () => {
             setIsLoading(true);
-            const today = dateUtils.getTodayString();
             let query = supabase
                 .from('deals')
                 .select('*')
-                .gte('tanggalAcara', today)
-                .order('tanggalAcara', { ascending: true })
+                .order('tanggalAcara', { ascending: false })
                 .limit(userRole === 'Direktor' ? 10 : 5);
 
             if (userRole === 'User' && assignedVenue) {
@@ -362,7 +367,7 @@ const UpcomingEvents: React.FC<UpcomingEventsProps> = ({ setActiveView, userRole
     return (
         <div className="card p-8 h-full">
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Event Mendatang</h2>
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Event Terbaru</h2>
                 {userRole === 'Direktor' && onOpenDirektorModal && (
                     <button
                         onClick={onOpenDirektorModal}
@@ -438,8 +443,8 @@ const UpcomingEvents: React.FC<UpcomingEventsProps> = ({ setActiveView, userRole
             ) : (
                 <div className="text-center py-12">
                     <CalendarIcon className="w-16 h-16 mx-auto text-[var(--color-text-secondary)] mb-4" />
-                    <p className="text-[var(--color-text-secondary)] text-lg">Tidak ada event mendatang</p>
-                    <p className="text-[var(--color-text-secondary)] text-sm mt-2">Event mendatang akan muncul di sini</p>
+                    <p className="text-[var(--color-text-secondary)] text-lg">Tidak ada event</p>
+                    <p className="text-[var(--color-text-secondary)] text-sm mt-2">Event akan muncul di sini</p>
                 </div>
             )}
 
@@ -493,7 +498,7 @@ const DirektorCalendarModal: React.FC<DirektorCalendarModalProps> = ({ events, o
                 <div className="flex justify-between items-start mb-4 sm:mb-6 flex-shrink-0">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Dashboard Kalender Event</h2>
-                        <p className="text-sm text-[var(--color-text-secondary)] mt-1">Ringkasan event mendatang untuk Direktur</p>
+                        <p className="text-sm text-[var(--color-text-secondary)] mt-1">Ringkasan semua event untuk Direktur</p>
                     </div>
                     <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
                         <CloseIcon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -536,7 +541,7 @@ const DirektorCalendarModal: React.FC<DirektorCalendarModalProps> = ({ events, o
                     ) : (
                         <div className="text-center py-8 sm:py-12">
                             <CalendarIcon className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-[var(--color-text-secondary)] mb-4" />
-                            <p className="text-[var(--color-text-secondary)] text-base sm:text-lg">Tidak ada event mendatang untuk ditampilkan.</p>
+                            <p className="text-[var(--color-text-secondary)] text-base sm:text-lg">Tidak ada event untuk ditampilkan.</p>
                         </div>
                     )}
                 </div>
@@ -562,17 +567,19 @@ interface DashboardViewProps {
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, assignedVenue }) => {
+    const { venues, deleteVenue } = useVenues();
     const [marketingCounts, setMarketingCounts] = useState<Record<string, number>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [isDirektorCalendarModalOpen, setIsDirektorCalendarModalOpen] = useState(false);
     const [upcomingEvents, setUpcomingEvents] = useState<DealingEntry[]>([]);
+    const [isAddVenueModalOpen, setIsAddVenueModalOpen] = useState(false);
 
     const displayedVenues = useMemo(() => {
         if (userRole === 'User' && assignedVenue) {
-            return VENUES.filter(v => v.name === assignedVenue);
+            return venues.filter(v => v.name === assignedVenue);
         }
-        return VENUES;
-    }, [userRole, assignedVenue]);
+        return venues;
+    }, [userRole, assignedVenue, venues]);
 
     useEffect(() => {
         const fetchCounts = async () => {
@@ -595,13 +602,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
     }, []);
 
     const fetchUpcomingEvents = async () => {
-        const today = dateUtils.getTodayString();
         let query = supabase
             .from('deals')
             .select('*')
-            .gte('tanggalAcara', today)
-            .order('tanggalAcara', { ascending: true })
-            .limit(10); // More for modal
+            .order('tanggalAcara', { ascending: false })
+            .limit(10);
 
         if (userRole === 'User' && assignedVenue) {
             query = query.eq('namaVenue', assignedVenue);
@@ -635,16 +640,44 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
 
             <div>
                 <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Venue</h1>
-                    <p className="text-[var(--color-text-secondary)]">Pilih venue untuk melihat detail</p>
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Venue</h1>
+                        <p className="text-[var(--color-text-secondary)]">Pilih venue untuk melihat detail</p>
+                    </div>
+                    {(userRole === 'Admin' || userRole === 'IT') && (
+                        <button
+                            onClick={() => setIsAddVenueModalOpen(true)}
+                            className="btn-primary py-2.5 px-5 flex items-center"
+                        >
+                            <PlusIcon className="w-5 h-5 mr-2" />
+                            Tambah Venue
+                        </button>
+                    )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {displayedVenues.map(venue => (
                         <div
                             key={venue.name}
-                            className="card p-6 cursor-pointer transform"
+                            className="card p-6 cursor-pointer transform group relative"
                             onClick={() => setActiveView({ type: 'VenueDetail', venueName: venue.name })}
                         >
+                            {(userRole === 'Admin' || userRole === 'IT') && venue.id && (
+                                <button
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm(`Apakah Anda yakin ingin menghapus venue "${venue.name}"?`)) {
+                                            const result = await deleteVenue(venue.id!);
+                                            if (!result.success) {
+                                                alert(result.error || 'Gagal menghapus venue.');
+                                            }
+                                        }
+                                    }}
+                                    className="absolute top-3 right-3 text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1.5 rounded-full hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                    aria-label={`Hapus venue ${venue.name}`}
+                                >
+                                    <TrashIcon className="w-4 h-4" />
+                                </button>
+                            )}
                             <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{venue.name}</h3>
                             <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                                 {isLoading ? 'Loading...' : `${marketingCounts[venue.name] || 0} Marketing Staff`}
@@ -653,6 +686,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
                     ))}
                 </div>
             </div>
+
+            <AddVenueModal
+                isOpen={isAddVenueModalOpen}
+                onClose={() => setIsAddVenueModalOpen(false)}
+            />
 
             {isDirektorCalendarModalOpen && (
                 <DirektorCalendarModal
@@ -1434,7 +1472,8 @@ interface VenueDetailViewProps {
 }
 
 const VenueDetailView: React.FC<VenueDetailViewProps> = ({ venueName, setLaporanModalData, setActiveView, userRole, assignedVenue }) => {
-    const venue = VENUES.find(v => v.name === venueName);
+    const { venues } = useVenues();
+    const venue = venues.find(v => v.name === venueName);
     const [marketingStaff, setMarketingStaff] = useState<MarketingPerson[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
@@ -1669,6 +1708,8 @@ const MainContent: React.FC<MainContentProps> = ({ activeView, setActiveView, se
                 return <CalendarEventView userRole={userRole} venueName={activeView.venueName} setActiveView={setActiveView} assignedVenue={assignedVenue} selectedEventId={activeView.selectedEventId} />;
             case 'EventCounting':
                 return <EventCountingView userRole={userRole} assignedVenue={assignedVenue} venueName={activeView.venueName} />;
+            case 'Leaderboard':
+                return <LeaderboardView userRole={userRole} assignedVenue={assignedVenue} />;
             case 'Profile':
                 return <ProfileView />;
             case 'DataUser':
@@ -1677,6 +1718,8 @@ const MainContent: React.FC<MainContentProps> = ({ activeView, setActiveView, se
                 return <MarketingView userRole={userRole} assignedVenue={assignedVenue} />;
             case 'LaporanBitrix':
                 return <LaporanBitrixView userRole={userRole} assignedVenue={assignedVenue} />;
+            case 'SiteSettings':
+                return <SiteSettingsView userRole={userRole} />;
             case 'VenueDetail':
                 return <VenueDetailView venueName={activeView.venueName} setLaporanModalData={setLaporanModalData} setActiveView={setActiveView} userRole={userRole} assignedVenue={assignedVenue} />;
             default:

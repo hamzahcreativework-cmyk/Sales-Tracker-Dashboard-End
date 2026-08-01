@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ManagedUser, UserRole } from './types';
 import { CloseIcon } from './Icons';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 
 interface AddUserModalProps {
     isOpen: boolean;
@@ -11,6 +11,7 @@ interface AddUserModalProps {
 }
 
 const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, isSaving }) => {
+    const { venues: VENUES } = useVenues();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

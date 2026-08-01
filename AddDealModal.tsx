@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DealingEntry, MarketingPerson, WeddingType } from './types';
 import { CloseIcon } from './Icons';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import { supabase } from './supabaseClient';
 
 interface AddDealModalProps {
@@ -12,6 +12,7 @@ interface AddDealModalProps {
 }
 
 const AddDealModal: React.FC<AddDealModalProps> = ({ isOpen, onClose, onSave, assignedVenue }) => {
+    const { venues: VENUES } = useVenues();
     const [namaClient, setNamaClient] = useState('');
     const [namaVenue, setNamaVenue] = useState(assignedVenue || VENUES[0]?.name || '');
     const [namaMarketing, setNamaMarketing] = useState('');

@@ -3,6 +3,20 @@ import { CalendarEventEntry, EventStatus } from './types';
 import { WaktuMalamIcon, WaktuPagiIcon, WaktuFullDayIcon } from './Icons';
 import { dateUtils } from './dateUtils';
 
+const VENUE_COLORS = [
+    '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1',
+    '#14B8A6', '#F97316', '#06B6D4', '#F43F5E',
+    '#10B981', '#F59E0B', '#7C3AED'
+];
+
+const getVenueColor = (venueName: string): string => {
+    let hash = 0;
+    for (let i = 0; i < venueName.length; i++) {
+        hash = venueName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return VENUE_COLORS[Math.abs(hash) % VENUE_COLORS.length];
+};
+
 interface AgendaViewProps {
     currentDate: Date;
     events: CalendarEventEntry[];
@@ -28,14 +42,7 @@ const getEventStatusStyles = (status: EventStatus): { border: string; bg: string
 const AgendaView: React.FC<AgendaViewProps> = ({ currentDate, events, onEventClick }) => {
     
     const groupedEvents = useMemo(() => {
-        const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        startOfMonth.setHours(0,0,0,0);
-
-        const relevantEvents = events
-            .filter(event => {
-                const eventDate = dateUtils.parseLocalDate(event.eventDate);
-                return eventDate >= startOfMonth;
-            })
+        const relevantEvents = [...events]
             .sort((a, b) => dateUtils.parseLocalDate(a.eventDate).getTime() - dateUtils.parseLocalDate(b.eventDate).getTime());
 
         // FIX: Add type annotation for the accumulator in `reduce` to prevent type errors with an empty initial object.
@@ -70,32 +77,44 @@ const AgendaView: React.FC<AgendaViewProps> = ({ currentDate, events, onEventCli
                                 <div className="space-y-3">
                                     {groupedEvents[dateStr].map(event => {
                                         const styles = getEventStatusStyles(event.status);
+                                        const venueColor = getVenueColor(event.venueName);
                                         return (
-                                            <button 
+                                            <button
                                                 key={event.id}
                                                 onClick={() => onEventClick(event)}
-                                                className={`w-full flex items-center gap-4 p-4 rounded-lg text-left transition-all duration-200 border-l-4 ${styles.border} ${styles.bg} hover:shadow-md hover:border-l-8 hover:-translate-y-px`}
+                                                className={`w-full flex items-start gap-3 p-4 rounded-lg text-left transition-all duration-200 border-l-4 ${styles.border} ${styles.bg} hover:shadow-md hover:border-l-8 hover:-translate-y-px`}
                                             >
-                                                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${styles.dot}`}></div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="flex-shrink-0 w-5 h-5 text-[var(--color-text-secondary)]">
-                                                        {event.waktuAcara === 'Pagi' && <WaktuPagiIcon className="w-5 h-5" />}
-                                                        {event.waktuAcara === 'Malam' && <WaktuMalamIcon className="w-5 h-5" />}
-                                                        {event.waktuAcara === 'Full Day' && <WaktuFullDayIcon className="w-5 h-5" />}
-                                                    </span>
-                                                    <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1">
-                                                    <div>
+                                                <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${styles.dot}`}></div>
+                                                <span className="flex-shrink-0 w-5 h-5 mt-0.5 text-[var(--color-text-secondary)]">
+                                                    {event.waktuAcara === 'Pagi' && <WaktuPagiIcon className="w-5 h-5" />}
+                                                    {event.waktuAcara === 'Malam' && <WaktuMalamIcon className="w-5 h-5" />}
+                                                    {event.waktuAcara === 'Full Day' && <WaktuFullDayIcon className="w-5 h-5" />}
+                                                </span>
+                                                <div className="flex-grow min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
                                                         <p className="font-bold text-[var(--color-text-primary)]">{event.eventOrder || 1}. {event.eventName}</p>
-                                                        <p className="text-sm text-[var(--color-text-secondary)]">{event.venueName}</p>
+                                                        {event.eventType && (
+                                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${event.eventType === 'Wedding' ? 'bg-pink-100 text-pink-800 border-pink-300' : 'bg-indigo-100 text-indigo-800 border-indigo-300'}`}>
+                                                                {event.eventType}
+                                                            </span>
+                                                        )}
+                                                        {event.jenisBooking && (
+                                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${styles.bg} ${styles.text} ${styles.border}`}>
+                                                                {event.jenisBooking}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm text-[var(--color-text-secondary)]">{event.paxCount} Pax</p>
-                                                    </div>
-                                                     <div>
-                                                         <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${styles.bg} ${styles.text} border ${styles.border}`}>{event.status}</span>
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-[var(--color-text-secondary)]">
+                                                        <span className="flex items-center gap-1">
+                                                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }}></span>
+                                                            {event.venueName}
+                                                        </span>
+                                                        {event.marketingName && (
+                                                            <span>Marketing: {event.marketingName}</span>
+                                                        )}
+                                                        <span>{event.paxCount} Pax</span>
                                                     </div>
                                                 </div>
-                                            </div>
                                             </button>
                                         );
                                     })}
@@ -106,8 +125,8 @@ const AgendaView: React.FC<AgendaViewProps> = ({ currentDate, events, onEventCli
                 </div>
             ) : (
                 <div className="text-center py-20">
-                     <p className="font-semibold text-lg text-[var(--color-text-primary)]">Tidak ada event mendatang</p>
-                     <p className="text-[var(--color-text-secondary)] mt-2">Tidak ada event yang dijadwalkan untuk bulan ini atau bulan-bulan berikutnya.</p>
+                     <p className="font-semibold text-lg text-[var(--color-text-primary)]">Tidak ada event</p>
+                     <p className="text-[var(--color-text-secondary)] mt-2">Belum ada event yang dijadwalkan.</p>
                 </div>
             )}
         </div>

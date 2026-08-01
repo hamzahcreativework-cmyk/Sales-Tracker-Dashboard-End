@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { VENUES } from './constants';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useVenues } from './VenueContext';
 import { DealingEntry, UserRole } from './types';
 import { supabase } from './supabaseClient';
 import { dateUtils } from './dateUtils';
@@ -21,7 +21,181 @@ interface EventCounts {
     total: number;
 }
 
+const PIE_COLORS = [
+    '#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899',
+];
+
+interface PieSlice {
+    label: string;
+    value: number;
+    color: string;
+}
+
+interface PieChartProps {
+    data: PieSlice[];
+    title: string;
+    subtitle?: string;
+    centerLabel?: string;
+}
+
+const PieChart: React.FC<PieChartProps> = ({ data, title, subtitle, centerLabel }) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    const total = data.reduce((sum, d) => sum + d.value, 0);
+    const sorted = useMemo(() => [...data].sort((a, b) => b.value - a.value), [data]);
+    const maxValue = sorted.length > 0 ? sorted[0].value : 0;
+
+    if (total === 0) {
+        return (
+            <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center min-h-[360px] shadow-sm">
+                <div className="text-sm font-semibold text-gray-900 mb-1">{title}</div>
+                {subtitle && <div className="text-xs text-gray-500 mb-4">{subtitle}</div>}
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300 mb-3">
+                    <circle cx="12" cy="12" r="10" strokeDasharray="4 2" />
+                    <path d="M12 8v4m0 4h.01" strokeLinecap="round" />
+                </svg>
+                <div className="text-gray-400 text-sm">Tidak ada data untuk periode ini</div>
+            </div>
+        );
+    }
+
+    const size = 200;
+    const cx = size / 2;
+    const cy = size / 2;
+    const outerRadius = 88;
+    const innerRadius = 58;
+
+    let currentAngle = -Math.PI / 2;
+    const slices = data.filter(d => d.value > 0).map((d, idx) => {
+        const sliceAngle = (d.value / total) * 2 * Math.PI;
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + sliceAngle;
+        currentAngle = endAngle;
+
+        const isHovered = hoveredIndex === idx;
+        const r = isHovered ? outerRadius + 4 : outerRadius;
+        const ir = innerRadius;
+
+        const x1 = cx + r * Math.cos(startAngle);
+        const y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle);
+        const y2 = cy + r * Math.sin(endAngle);
+        const ix1 = cx + ir * Math.cos(endAngle);
+        const iy1 = cy + ir * Math.sin(endAngle);
+        const ix2 = cx + ir * Math.cos(startAngle);
+        const iy2 = cy + ir * Math.sin(startAngle);
+        const largeArc = sliceAngle > Math.PI ? 1 : 0;
+
+        const path = sliceAngle >= 2 * Math.PI - 0.001
+            ? `M ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} M ${cx + ir} ${cy} A ${ir} ${ir} 0 1 0 ${cx - ir} ${cy} A ${ir} ${ir} 0 1 0 ${cx + ir} ${cy}`
+            : `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${ir} ${ir} 0 ${largeArc} 0 ${ix2} ${iy2} Z`;
+
+        const pct = Math.round((d.value / total) * 100);
+
+        return { ...d, path, pct, sliceAngle, idx };
+    });
+
+    const topItem = sorted[0];
+    const topPct = Math.round((topItem.value / total) * 100);
+
+    return (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-4">
+                <div>
+                    <div className="text-sm font-semibold text-gray-900">{title}</div>
+                    {subtitle && <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>}
+                </div>
+                <div className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {total} event
+                </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+                {/* Donut Chart */}
+                <div className="relative flex-shrink-0">
+                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-sm">
+                        {slices.map((s, i) => (
+                            <path
+                                key={i}
+                                d={s.path}
+                                fill={s.color}
+                                fillRule="evenodd"
+                                stroke="white"
+                                strokeWidth="2"
+                                opacity={hoveredIndex === null || hoveredIndex === s.idx ? 1 : 0.4}
+                                style={{ transition: 'opacity 0.2s, d 0.2s', cursor: 'pointer' }}
+                                onMouseEnter={() => setHoveredIndex(s.idx)}
+                                onMouseLeave={() => setHoveredIndex(null)}
+                            />
+                        ))}
+                    </svg>
+                    {/* Center content */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        {hoveredIndex !== null ? (
+                            <>
+                                <div className="text-2xl font-bold text-gray-900">{data[hoveredIndex]?.value}</div>
+                                <div className="text-xs text-gray-500 max-w-[70px] text-center leading-tight">{data[hoveredIndex]?.label}</div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold text-gray-900">{total}</div>
+                                <div className="text-xs text-gray-500">{centerLabel || 'Total'}</div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* Legend with bars */}
+                <div className="flex-1 w-full space-y-2.5">
+                    {sorted.map((d, i) => {
+                        const pct = Math.round((d.value / total) * 100);
+                        const barWidth = maxValue > 0 ? (d.value / maxValue) * 100 : 0;
+                        const originalIdx = data.findIndex(orig => orig.label === d.label);
+                        const isHovered = hoveredIndex === originalIdx;
+                        return (
+                            <div
+                                key={i}
+                                className={`rounded-lg px-3 py-2 transition-colors cursor-pointer ${isHovered ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                                onMouseEnter={() => setHoveredIndex(originalIdx)}
+                                onMouseLeave={() => setHoveredIndex(null)}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: d.color }} />
+                                        <span className="text-xs font-medium text-gray-700">{d.label}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-gray-900">{d.value}</span>
+                                        <span className="text-xs text-gray-400">({pct}%)</span>
+                                    </div>
+                                </div>
+                                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${barWidth}%`, backgroundColor: d.color, opacity: isHovered ? 1 : 0.7 }}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Insight callout */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-500 flex-shrink-0">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span><strong className="text-gray-800">{topItem.label}</strong> mendominasi dengan {topPct}% dari total event</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assignedVenue, venueName }) => {
+    const { venues: VENUES } = useVenues();
     const [counts, setCounts] = useState<EventCounts>({
         monday: { morning: 0, evening: 0 },
         tuesday: { morning: 0, evening: 0 },
@@ -40,6 +214,7 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
     const [endDate, setEndDate] = useState<string>('');
     const [filterMode, setFilterMode] = useState<'year' | 'range'>('year');
     const [emptyDatesByVenue, setEmptyDatesByVenue] = useState<Record<string, { weekdays: number; weekendSlots: number }>>({});
+    const [allVenueNames, setAllVenueNames] = useState<string[]>([]);
 
     const effectiveVenueName = assignedVenue || venueName;
 
@@ -69,7 +244,7 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
         setError(null);
         try {
             console.log('Fetching events for counting...');
-            const venuesToCount = effectiveVenueName ? [effectiveVenueName] : VENUES.map(v => v.name);
+            let venuesToCount = effectiveVenueName ? [effectiveVenueName] : VENUES.map(v => v.name);
 
             let query = supabase.from('deals').select('namaVenue, tanggalAcara, waktuAcara');
             if (effectiveVenueName) {
@@ -112,6 +287,14 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
                 });
             }
 
+            if (!effectiveVenueName) {
+                const dealVenues = new Set(filteredDeals.map(d => d.namaVenue).filter(Boolean));
+                dealVenues.forEach(v => {
+                    if (!venuesToCount.includes(v)) venuesToCount.push(v);
+                });
+                venuesToCount.sort((a, b) => a.localeCompare(b));
+            }
+
             // Count events by day of week and time
             const newCounts: EventCounts = {
                 monday: { morning: 0, evening: 0 },
@@ -132,16 +315,15 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
             });
 
             filteredDeals.forEach(deal => {
-                if (!deal.namaVenue || !deal.tanggalAcara || !venuesToCount.includes(deal.namaVenue)) {
+                if (!deal.tanggalAcara) {
                     return;
                 }
 
                 const eventDate = dateUtils.parseLocalDate(deal.tanggalAcara);
                 const eventDateStr = deal.tanggalAcara;
-                const dayOfWeek = eventDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-                const waktuAcara = deal.waktuAcara || 'Malam'; // Default to Malam if not specified
+                const dayOfWeek = eventDate.getDay();
+                const waktuAcara = deal.waktuAcara || 'Malam';
 
-                // Day mapping: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
                 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
                 const dayName = dayNames[dayOfWeek];
 
@@ -152,15 +334,17 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
                     newCounts[dayName].evening++;
                 }
 
-                if (dayOfWeek === 0 || dayOfWeek === 6) {
-                    if (waktuAcara === 'Pagi' || waktuAcara === 'Full Day') {
-                        datesByVenueWeekendSlots[deal.namaVenue]?.add(`${eventDateStr}|Pagi`);
+                if (deal.namaVenue && venuesToCount.includes(deal.namaVenue)) {
+                    if (dayOfWeek === 0 || dayOfWeek === 6) {
+                        if (waktuAcara === 'Pagi' || waktuAcara === 'Full Day') {
+                            datesByVenueWeekendSlots[deal.namaVenue]?.add(`${eventDateStr}|Pagi`);
+                        }
+                        if (waktuAcara === 'Malam' || waktuAcara === 'Full Day') {
+                            datesByVenueWeekendSlots[deal.namaVenue]?.add(`${eventDateStr}|Malam`);
+                        }
+                    } else {
+                        datesByVenueWeekday[deal.namaVenue]?.add(eventDateStr);
                     }
-                    if (waktuAcara === 'Malam' || waktuAcara === 'Full Day') {
-                        datesByVenueWeekendSlots[deal.namaVenue]?.add(`${eventDateStr}|Malam`);
-                    }
-                } else {
-                    datesByVenueWeekday[deal.namaVenue]?.add(eventDateStr);
                 }
             });
 
@@ -204,6 +388,7 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
 
             setCounts(newCounts);
             setEmptyDatesByVenue(newEmptyDatesByVenue);
+            setAllVenueNames(venuesToCount);
             console.log('Event counts:', newCounts);
             console.log('Empty dates by venue:', newEmptyDatesByVenue);
         } catch (err) {
@@ -216,7 +401,7 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
 
     useEffect(() => {
         fetchAndCountEvents();
-    }, [effectiveVenueName, yearStart, yearEnd, startDate, endDate, filterMode]);
+    }, [effectiveVenueName, yearStart, yearEnd, startDate, endDate, filterMode, VENUES]);
 
     const handleRefresh = () => {
         fetchAndCountEvents();
@@ -341,6 +526,41 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                         <div className="text-sm text-gray-600 mb-2">Total Event</div>
                         <p className="text-3xl font-semibold text-gray-900">{counts.total}</p>
+                    </div>
+
+                    {/* Pie Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <PieChart
+                            title="Distribusi Event per Hari"
+                            subtitle="Proporsi event berdasarkan hari dalam seminggu"
+                            centerLabel="Total"
+                            data={[
+                                { label: 'Senin', value: counts.monday.morning + counts.monday.evening, color: PIE_COLORS[0] },
+                                { label: 'Selasa', value: counts.tuesday.morning + counts.tuesday.evening, color: PIE_COLORS[1] },
+                                { label: 'Rabu', value: counts.wednesday.morning + counts.wednesday.evening, color: PIE_COLORS[2] },
+                                { label: 'Kamis', value: counts.thursday.morning + counts.thursday.evening, color: PIE_COLORS[3] },
+                                { label: 'Jumat', value: counts.friday.morning + counts.friday.evening, color: PIE_COLORS[4] },
+                                { label: 'Sabtu', value: counts.saturday.morning + counts.saturday.evening, color: PIE_COLORS[5] },
+                                { label: 'Minggu', value: counts.sunday.morning + counts.sunday.evening, color: PIE_COLORS[6] },
+                            ]}
+                        />
+                        <PieChart
+                            title="Distribusi Waktu Event"
+                            subtitle="Perbandingan sesi Pagi dan Malam"
+                            centerLabel="Sesi"
+                            data={[
+                                {
+                                    label: 'Pagi',
+                                    value: counts.monday.morning + counts.tuesday.morning + counts.wednesday.morning + counts.thursday.morning + counts.friday.morning + counts.saturday.morning + counts.sunday.morning,
+                                    color: '#f59e0b',
+                                },
+                                {
+                                    label: 'Malam',
+                                    value: counts.monday.evening + counts.tuesday.evening + counts.wednesday.evening + counts.thursday.evening + counts.friday.evening + counts.saturday.evening + counts.sunday.evening,
+                                    color: '#6366f1',
+                                },
+                            ]}
+                        />
                     </div>
 
                     {/* Counting Grid - All Days */}
@@ -486,36 +706,38 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
                         </div>
                     </div>
 
-                    {/* Empty Dates by Venue */}
+                    {/* Empty Dates by Venue - Pie Charts */}
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                             <div>
                                 <h3 className="text-sm font-semibold text-gray-900">Tanggal Kosong per Venue</h3>
-                                <p className="text-xs text-gray-500">Jumlah hari tanpa event di setiap venue untuk periode yang dipilih.</p>
+                                <p className="text-xs text-gray-500">Visualisasi hari tanpa event di setiap venue untuk periode yang dipilih.</p>
                             </div>
                             {filterMode === 'range' && (!startDate || !endDate) && (
                                 <p className="text-xs text-red-600">Pilih tanggal mulai dan akhir untuk melihat perhitungan tanggal kosong.</p>
                             )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {(effectiveVenueName ? [effectiveVenueName] : VENUES.map(v => v.name)).map(venue => {
-                                const emptyCounts = emptyDatesByVenue[venue] || { weekdays: 0, weekendSlots: 0 };
-                                return (
-                                    <div key={venue} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                        <div className="text-xs text-gray-600 mb-2">{venue}</div>
-                                        <div className="flex items-center gap-4">
-                                            <div>
-                                                <div className="text-2xl font-semibold text-gray-900">{emptyCounts.weekdays}</div>
-                                                <div className="text-xs text-gray-500">Weekdays</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-semibold text-gray-900">{emptyCounts.weekendSlots}</div>
-                                                <div className="text-xs text-gray-500">Weekend Slots</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <PieChart
+                                title="Weekdays Kosong per Venue"
+                                subtitle="Jumlah hari kerja tanpa event per venue"
+                                centerLabel="Hari"
+                                data={(effectiveVenueName ? [effectiveVenueName] : allVenueNames).map((venue, idx) => ({
+                                    label: venue,
+                                    value: (emptyDatesByVenue[venue] || { weekdays: 0 }).weekdays,
+                                    color: PIE_COLORS[idx % PIE_COLORS.length],
+                                }))}
+                            />
+                            <PieChart
+                                title="Weekend Slots Kosong per Venue"
+                                subtitle="Jumlah slot weekend tanpa event per venue"
+                                centerLabel="Slot"
+                                data={(effectiveVenueName ? [effectiveVenueName] : allVenueNames).map((venue, idx) => ({
+                                    label: venue,
+                                    value: (emptyDatesByVenue[venue] || { weekendSlots: 0 }).weekendSlots,
+                                    color: PIE_COLORS[idx % PIE_COLORS.length],
+                                }))}
+                            />
                         </div>
                     </div>
                 </div>

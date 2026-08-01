@@ -1,5 +1,5 @@
 import React from 'react';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import { MarketingPerson } from './types';
 
 export interface DealFilters {
@@ -22,6 +22,7 @@ interface FilterSectionProps {
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({ filters, onFilterChange, onReset, sumberDataOptions, marketingOptions }) => {
+    const { venues: VENUES } = useVenues();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

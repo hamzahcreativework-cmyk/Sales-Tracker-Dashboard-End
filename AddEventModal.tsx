@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DealingEntry, MarketingPerson, BookingStatus, EventTime, UserRole } from './types';
 import { CloseIcon } from './Icons';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 import { supabase } from './supabaseClient';
 import { dateUtils } from './dateUtils';
 
@@ -15,6 +15,7 @@ interface AddEventModalProps {
 }
 
 const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, selectedDate, venueName: preselectedVenue, userRole }) => {
+    const { venues: VENUES } = useVenues();
     const [namaClient, setNamaClient] = useState('');
     const [namaVenue, setNamaVenue] = useState(preselectedVenue || VENUES[0]?.name || '');
     const [namaMarketing, setNamaMarketing] = useState('');

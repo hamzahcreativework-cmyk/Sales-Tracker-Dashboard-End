@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Calendar - Cricket Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cricket-bg: #0a2e1a;
+            --cricket-surface: #0d3a22;
+            --cricket-panel: #132f1e;
+            --cricket-border: #1a5c35;
+            --cricket-gold: #FFD700;
+            --cricket-white: #E8F5E9;
+            --cricket-red: #FF4444;
+            --cricket-glow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        html {
+            color-scheme: dark;
+            font-size: 14px;
+        }
+
+        @media (min-width: 640px) {
+            html {
+                font-size: 15px;
+            }
+        }
+        @media (min-width: 1024px) {
+            html {
+                font-size: 16px;
+            }
+        }
+
+        body {
+            background-color: var(--cricket-bg);
+            font-family: 'Poppins', sans-serif;
+            color: var(--cricket-white);
+            -webkit-text-size-adjust: 100%;
+        }
+
+        @keyframes ledPulse {
+            0%, 100% { opacity: 1; box-shadow: var(--cricket-glow); }
+            50% { opacity: 0.85; box-shadow: 0 0 18px rgba(255, 215, 0, 0.5); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .led-pulse {
+            animation: ledPulse 2s ease-in-out infinite;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--cricket-surface);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--cricket-border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--cricket-gold);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@supabase/supabase-js": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm",
+    "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm",
+    "jspdf-autotable": "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/+esm"
+  }
+}
+</script>
+</head>
+<body class="h-full font-sans">
+    <div id="calendar-root" class="min-h-screen"></div>
+<script type="module" src="/calendar-entry.tsx"></script>
+</body>
+</html>

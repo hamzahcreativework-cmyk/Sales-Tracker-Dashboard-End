@@ -4,7 +4,7 @@ import {
 } from './Icons';
 import { ActiveView } from './App';
 import { UserRole } from './types';
-import { VENUES } from './constants';
+import { useVenues } from './VenueContext';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -34,6 +34,7 @@ const NavLink: React.FC<{
 );
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setActiveView, onLogout, userRole, assignedVenue }) => {
+    const { venues } = useVenues();
     const isCalendarActive = activeView.type === 'CalendarEvent';
     const [isCalendarOpen, setIsCalendarOpen] = useState(isCalendarActive);
 
@@ -45,10 +46,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
 
     const displayedVenues = useMemo(() => {
         if (userRole === 'User' && assignedVenue) {
-            return VENUES.filter(v => v.name === assignedVenue);
+            return venues.filter(v => v.name === assignedVenue);
         }
-        return VENUES;
-    }, [userRole, assignedVenue]);
+        return venues;
+    }, [userRole, assignedVenue, venues]);
 
     const sidebarContent = (
         <>
@@ -91,6 +92,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
                         onClick={() => setActiveView({ type: 'EventCounting' })}
                     />
                     <NavLink
+                        icon={<AnalyticsIcon className="w-5 h-5" />}
+                        label="Leaderboard"
+                        active={activeView.type === 'Leaderboard'}
+                        onClick={() => setActiveView({ type: 'Leaderboard' })}
+                    />
+                    <NavLink
                         icon={<BellIcon className="w-5 h-5" />} // Using BellIcon for Marketing temporarily
                         label="Daily Report"
                         active={activeView.type === 'Marketing'}
@@ -127,12 +134,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
                         )}
                     </div>
                     {(userRole === 'Admin' || userRole === 'IT') && (
-                        <NavLink
-                            icon={<TeamIcon className="w-5 h-5" />}
-                            label="Data User"
-                            active={activeView.type === 'DataUser'}
-                            onClick={() => setActiveView({ type: 'DataUser' })}
-                        />
+                        <>
+                            <NavLink
+                                icon={<TeamIcon className="w-5 h-5" />}
+                                label="Data User"
+                                active={activeView.type === 'DataUser'}
+                                onClick={() => setActiveView({ type: 'DataUser' })}
+                            />
+                            <NavLink
+                                icon={<SettingsIcon className="w-5 h-5" />}
+                                label="Pengaturan Situs"
+                                active={activeView.type === 'SiteSettings'}
+                                onClick={() => setActiveView({ type: 'SiteSettings' })}
+                            />
+                        </>
                     )}
                 </nav>
             </div>
