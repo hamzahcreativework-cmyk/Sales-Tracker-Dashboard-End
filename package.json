@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2",
     "codex": "^0.2.3",
+    "framer-motion": "^13.0.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "react": "^19.2.0",

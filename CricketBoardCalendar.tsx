@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './supabaseClient';
 import { dateUtils } from './dateUtils';
 import { DealingEntry } from './types';
@@ -38,11 +39,31 @@ const WAKTU_ICONS: Record<string, string> = {
 };
 
 // ─── CSS Var helpers (inline style shorthand) ────────────────────────────────
-const S = {
-    bg:      { backgroundColor: '#0a2e1a' } as React.CSSProperties,
-    surface: { backgroundColor: '#0d3a22' } as React.CSSProperties,
-    panel:   { backgroundColor: '#132f1e' } as React.CSSProperties,
-    border:  '1px solid #1a5c35',
+function adjustColor(hex: string, amount: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, ((num >> 16) & 0xff) + amount);
+    const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+    const b = Math.min(255, (num & 0xff) + amount);
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+const DEFAULT_COLORS = {
+    bg: '#0a2e1a',
+    surface: '#0d3a22',
+    panel: '#132f1e',
+    border: '#1a5c35',
+};
+
+let S = {
+    bg:      { backgroundColor: DEFAULT_COLORS.bg } as React.CSSProperties,
+    surface: { backgroundColor: DEFAULT_COLORS.surface } as React.CSSProperties,
+    panel:   { backgroundColor: DEFAULT_COLORS.panel } as React.CSSProperties,
+    border:  `1px solid ${DEFAULT_COLORS.border}`,
+    bgRaw:      DEFAULT_COLORS.bg,
+    surfaceRaw: DEFAULT_COLORS.surface,
+    panelRaw:   DEFAULT_COLORS.panel,
+    borderRaw:  DEFAULT_COLORS.border,
+    muted:      '#3d6b4d',
     gold:    '#FFD700',
     white:   '#E8F5E9',
     red:     '#FF4444',
@@ -125,7 +146,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
     ];
 
     return (
-        <div
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
             style={{
                 position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -133,7 +158,11 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
             }}
             onClick={onClose}
         >
-            <div
+            <motion.div
+                initial={{ opacity: 0, scale: 0.85, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85, y: 20 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 style={{
                     ...S.panel,
                     border: `2px solid ${color}`,
@@ -166,7 +195,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
                         style={{
                             ...S.orbitron,
                             backgroundColor: 'transparent',
-                            border: `1px solid #1a5c35`,
+                            border: S.border,
                             color: S.white,
                             borderRadius: 6,
                             padding: '4px 10px',
@@ -179,7 +208,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
                 </div>
 
                 {/* Status badge */}
-                <div style={{ padding: '12px 20px', borderBottom: '1px solid #1a5c35', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ padding: '12px 20px', borderBottom: S.border, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{
                         ...S.poppins,
                         backgroundColor: statusColor + '33',
@@ -211,7 +240,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
                     {rows.map(([label, value], i) => (
                         <div key={label} style={{
                             display: 'flex',
-                            borderBottom: i < rows.length - 1 ? '1px solid #1a5c3555' : 'none',
+                            borderBottom: i < rows.length - 1 ? `1px solid ${S.borderRaw}55` : 'none',
                             padding: '7px 0',
                         }}>
                             <div style={{
@@ -238,8 +267,8 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ deal, onClose }) =>
                         </div>
                     ))}
                 </div>
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
 
@@ -251,7 +280,11 @@ interface DayOverflowPopupProps {
     onSelectDeal: (deal: DealingEntry) => void;
 }
 const DayOverflowPopup: React.FC<DayOverflowPopupProps> = ({ date, deals, onClose, onSelectDeal }) => (
-    <div
+    <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
         style={{
             position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -259,7 +292,11 @@ const DayOverflowPopup: React.FC<DayOverflowPopupProps> = ({ date, deals, onClos
         }}
         onClick={onClose}
     >
-        <div
+        <motion.div
+            initial={{ opacity: 0, scale: 0.85, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.85, y: 20 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             style={{
                 ...S.panel,
                 border: S.border,
@@ -318,8 +355,8 @@ const DayOverflowPopup: React.FC<DayOverflowPopupProps> = ({ date, deals, onClos
                     </div>
                 ))}
             </div>
-        </div>
-    </div>
+        </motion.div>
+    </motion.div>
 );
 
 // ─── Stat Panel ───────────────────────────────────────────────────────────────
@@ -328,23 +365,30 @@ interface StatPanelProps {
     value: number;
     color?: string;
     flash?: boolean;
+    index?: number;
+    baseDelay?: number;
 }
-const StatPanel: React.FC<StatPanelProps> = ({ label, value, color = S.gold, flash }) => (
-    <div style={{
-        ...S.surface,
-        border: S.border,
-        borderRadius: 8,
-        padding: '10px 14px',
-        textAlign: 'center',
-        minWidth: 80,
-        flex: '1 1 80px',
-        transition: 'box-shadow 0.3s',
-        boxShadow: flash ? `0 0 20px ${color}88` : 'none',
-    }}>
+const StatPanel: React.FC<StatPanelProps> = ({ label, value, color = S.gold, flash, index = 0, baseDelay = 0 }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, delay: baseDelay + 0.08 * index, ease: 'easeOut' }}
+        style={{
+            ...S.surface,
+            border: S.border,
+            borderRadius: 8,
+            padding: '6px 10px',
+            textAlign: 'center',
+            minWidth: 80,
+            flex: '1 1 80px',
+            transition: 'box-shadow 0.3s',
+            boxShadow: flash ? `0 0 20px ${color}88` : 'none',
+        }}
+    >
         <div style={{
             ...S.orbitron,
             color,
-            fontSize: 26,
+            fontSize: 20,
             fontWeight: 700,
             textShadow: S.glow,
             lineHeight: 1.1,
@@ -361,7 +405,7 @@ const StatPanel: React.FC<StatPanelProps> = ({ label, value, color = S.gold, fla
         }}>
             {label}
         </div>
-    </div>
+    </motion.div>
 );
 
 // ─── Compact mode sub-components ─────────────────────────────────────────────
@@ -422,8 +466,9 @@ interface TanggalCantikProps {
     month: number;
     deals: DealingEntry[];
     onSelectDate: (dateStr: string) => void;
+    baseDelay?: number;
 }
-const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSelectDate }) => {
+const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSelectDate, baseDelay = 0 }) => {
     const cantikDates = generateTanggalCantik(year, month);
     const mm = String(month + 1).padStart(2, '0');
 
@@ -434,28 +479,30 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
     }, {});
 
     return (
-        <div style={{
-            ...S.panel,
-            border: S.border,
-            borderRadius: 16,
-            overflow: 'hidden',
-            height: '100%',
-            minHeight: 320,
-            display: 'flex',
-            flexDirection: 'column',
-        }}>
+        <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: baseDelay, ease: 'easeOut' }}
+            className="billboard-panel"
+            style={{
+                ...S.panel,
+                borderRadius: 16,
+                overflow: 'hidden',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+        >
             {/* Header */}
-            <div style={{
-                ...S.surface,
-                borderBottom: S.border,
-                padding: '10px 16px',
+            <div className="billboard-header" style={{
+                padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14 }}>💎</span>
-                    <span style={{ ...S.orbitron, color: S.gold, fontSize: 10, letterSpacing: '0.1em', textShadow: S.glow }}>
+                    <span style={{ fontSize: 16 }}>💎</span>
+                    <span style={{ ...S.orbitron, color: S.gold, fontSize: 11, letterSpacing: '0.12em', textShadow: `0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.15)` }}>
                         TANGGAL CANTIK
                     </span>
                 </div>
@@ -467,11 +514,11 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
             {/* Date list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
                 {cantikDates.length === 0 ? (
-                    <div style={{ ...S.poppins, color: '#3d6b4d', fontSize: 12, textAlign: 'center', padding: 24 }}>
+                    <div style={{ ...S.poppins, color: S.muted, fontSize: 12, textAlign: 'center', padding: 24 }}>
                         Tidak ada tanggal cantik bulan ini
                     </div>
                 ) : (
-                    cantikDates.map(cd => {
+                    cantikDates.map((cd, i) => {
                         const dateStr = `${year}-${mm}-${String(cd.day).padStart(2, '0')}`;
                         const dayDeals = dealsByDate[dateStr] ?? [];
                         const dateObj = new Date(year, month, cd.day);
@@ -479,20 +526,22 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
                         const isBooked = dayDeals.length > 0;
 
                         return (
-                            <div
+                            <motion.div
                                 key={cd.day}
+                                initial={{ opacity: 0, y: 18 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: baseDelay + 0.06 * i, ease: 'easeOut' }}
+                            >
+                            <div
+                                className="billboard-card"
                                 onClick={() => onSelectDate(dateStr)}
                                 style={{
-                                    ...S.surface,
                                     borderRadius: 10,
                                     padding: '10px 12px',
                                     marginBottom: 8,
                                     cursor: 'pointer',
-                                    transition: 'opacity 0.15s, transform 0.15s',
                                     borderLeft: `3px solid ${S.gold}`,
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; e.currentTarget.style.transform = 'translateX(2px)'; }}
-                                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateX(0)'; }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -505,7 +554,7 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
                                             lineHeight: 1,
                                             minWidth: 36,
                                             textAlign: 'center',
-                                            textShadow: `0 0 12px ${S.gold}44`,
+                                            textShadow: `0 0 12px ${S.gold}66, 0 0 24px ${S.gold}22`,
                                         }}>
                                             {String(cd.day).padStart(2, '0')}
                                         </div>
@@ -531,16 +580,17 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
                                     </div>
                                 </div>
                             </div>
+                            </motion.div>
                         );
                     })
                 )}
             </div>
-        </div>
+        </motion.div>
     );
 };
 
 // Grid 2: Video display (supports multiple videos as carousel)
-const VideoPanel: React.FC<{ videoUrls: string[] }> = ({ videoUrls }) => {
+const VideoPanel: React.FC<{ videoUrls: string[]; enabled?: boolean; placeholderText?: string }> = ({ videoUrls, enabled = true, placeholderText = '' }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     // Clamp index if urls shrink
@@ -569,39 +619,40 @@ const VideoPanel: React.FC<{ videoUrls: string[] }> = ({ videoUrls }) => {
     };
 
     return (
-        <div style={{
+        <div className="billboard-panel" style={{
             ...S.panel,
-            border: S.border,
             borderRadius: 16,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
+            height: '100%',
         }}>
-            {/* Header */}
-            <div style={{
-                ...S.surface,
-                borderBottom: S.border,
-                padding: '10px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14 }}>🎬</span>
-                    <span style={{ ...S.orbitron, color: S.gold, fontSize: 10, letterSpacing: '0.1em', textShadow: S.glow }}>
-                        LIVE BROADCAST
-                    </span>
-                </div>
-                {videoUrls.length > 1 && (
-                    <span style={{ ...S.orbitron, color: '#9CA3AF', fontSize: 10 }}>
-                        {safeIndex + 1} / {videoUrls.length}
-                    </span>
-                )}
-            </div>
-            {/* Video area — 16:9 aspect ratio (1920×1080) */}
-            <div style={{ position: 'relative', backgroundColor: '#000', paddingBottom: '56.25%' }}>
-                {videoUrls.length === 0 ? (
+            {/* Video area */}
+            <div style={{ position: 'relative', backgroundColor: enabled ? '#000' : '#FFFFFF', flex: 1, minHeight: 0 }}>
+                {!enabled ? (
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        gap: 12,
+                        backgroundColor: '#FFFFFF',
+                    }}>
+                        <span style={{
+                            ...S.poppins,
+                            color: '#6B7280',
+                            fontSize: 16,
+                            fontWeight: 600,
+                            textAlign: 'center',
+                            padding: '0 20px',
+                            lineHeight: 1.5,
+                        }}>
+                            {placeholderText || 'Video tidak tersedia'}
+                        </span>
+                    </div>
+                ) : videoUrls.length === 0 ? (
                     <div style={{
                         position: 'absolute',
                         inset: 0,
@@ -612,7 +663,7 @@ const VideoPanel: React.FC<{ videoUrls: string[] }> = ({ videoUrls }) => {
                         gap: 8,
                     }}>
                         <span style={{ fontSize: 32, opacity: 0.3 }}>📺</span>
-                        <span style={{ ...S.poppins, color: '#3d6b4d', fontSize: 12 }}>
+                        <span style={{ ...S.poppins, color: S.muted, fontSize: 12 }}>
                             No video — upload via CMS
                         </span>
                     </div>
@@ -695,8 +746,10 @@ interface VenueAvailabilityProps {
     onDateChange: (dateStr: string) => void;
     onToday: () => void;
     venueNames: string[];
+    baseDelay?: number;
+    compact?: boolean;
 }
-const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDate, onDateChange, onToday, venueNames }) => {
+const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDate, onDateChange, onToday, venueNames, baseDelay = 0, compact = false }) => {
     const selectedDeals = deals.filter(d => d.tanggalAcara === selectedDate);
 
     const venueMap: Record<string, { pagi: DealingEntry | null; malam: DealingEntry | null; fullDay: DealingEntry | null; others: DealingEntry[] }> = {};
@@ -725,7 +778,7 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
     const todayBtnStyle: React.CSSProperties = {
         ...S.orbitron,
         backgroundColor: 'transparent',
-        border: `1px solid #1a5c35`,
+        border: S.border,
         color: S.gold,
         borderRadius: 4,
         padding: '2px 8px',
@@ -736,34 +789,37 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
     };
 
     return (
-        <div style={{
-            ...S.panel,
-            border: S.border,
-            borderRadius: 16,
-            overflow: 'hidden',
-            height: '100%',
-            minHeight: 320,
-            display: 'flex',
-            flexDirection: 'column',
-        }}>
+        <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: baseDelay, ease: 'easeOut' }}
+            className="billboard-panel"
+            style={{
+                ...S.panel,
+                borderRadius: 16,
+                overflow: 'hidden',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
+        >
             {/* Header */}
-            <div style={{
-                ...S.surface,
-                borderBottom: S.border,
-                padding: '10px 16px',
+            <div className="billboard-header" style={{
+                padding: '12px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14 }}>🏟️</span>
-                    <span style={{ ...S.orbitron, color: S.gold, fontSize: 10, letterSpacing: '0.1em', textShadow: S.glow }}>
+                    <span style={{ fontSize: 16 }}>🏟️</span>
+                    <span style={{ ...S.orbitron, color: S.gold, fontSize: 11, letterSpacing: '0.12em', textShadow: `0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.15)` }}>
                         VENUE AVAILABILITY
                     </span>
                 </div>
             </div>
 
             {/* Date picker */}
+            {!compact && (
             <div style={{
                 ...S.surface,
                 borderBottom: S.border,
@@ -780,8 +836,8 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                         onChange={e => onDateChange(e.target.value)}
                         style={{
                             ...S.orbitron,
-                            backgroundColor: '#0d3a22',
-                            border: '1px solid #1a5c35',
+                            backgroundColor: S.surfaceRaw,
+                            border: S.border,
                             color: S.gold,
                             borderRadius: 6,
                             padding: '4px 8px',
@@ -801,20 +857,21 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                     <button
                         style={todayBtnStyle}
                         onClick={onToday}
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#1a5c35'; }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = S.borderRaw; }}
                         onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >TODAY</button>
                 )}
             </div>
+            )}
 
             {/* Venue list */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
                 {allVenues.length === 0 ? (
-                    <div style={{ ...S.poppins, color: '#3d6b4d', fontSize: 12, textAlign: 'center', padding: 24 }}>
+                    <div style={{ ...S.poppins, color: S.muted, fontSize: 12, textAlign: 'center', padding: 24 }}>
                         Memuat data venue...
                     </div>
                 ) : (
-                    allVenues.map(venue => {
+                    allVenues.map((venue, i) => {
                         const info = venueMap[venue];
                         const color = getVenueColor(venue);
                         const hasFullDay = !!info.fullDay;
@@ -831,10 +888,15 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                             ];
 
                         return (
-                            <div
+                            <motion.div
                                 key={venue}
+                                initial={{ opacity: 0, y: 18 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.35, delay: baseDelay + 0.06 * i, ease: 'easeOut' }}
+                            >
+                            <div
+                                className="billboard-card"
                                 style={{
-                                    ...S.surface,
                                     borderLeft: `3px solid ${color}`,
                                     borderRadius: 8,
                                     padding: '10px 12px',
@@ -918,11 +980,12 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                                     ))}
                                 </div>
                             </div>
+                            </motion.div>
                         );
                     })
                 )}
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -974,7 +1037,7 @@ const EventChart: React.FC<EventChartProps> = ({ monthDeals, monthLabel }) => {
                 }}>
                     {label}
                 </div>
-                <div style={{ flex: 1, height: 18, backgroundColor: '#0a2e1a', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+                <div style={{ flex: 1, height: 18, backgroundColor: S.bgRaw, borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                     <div style={{
                         height: '100%',
                         width: mounted ? `${pct}%` : '0%',
@@ -1004,8 +1067,8 @@ const EventChart: React.FC<EventChartProps> = ({ monthDeals, monthLabel }) => {
             ...S.panel,
             border: S.border,
             borderRadius: 10,
-            padding: '14px 16px',
-            marginTop: 16,
+            padding: '8px 12px',
+            marginTop: 8,
         }}>
             <div style={{ ...S.orbitron, color: S.gold, fontSize: 11, letterSpacing: '0.1em', marginBottom: 14, textShadow: S.glow }}>
                 EVENT CHART — {monthLabel}
@@ -1028,7 +1091,7 @@ const EventChart: React.FC<EventChartProps> = ({ monthDeals, monthLabel }) => {
                         EVENTS PER VENUE
                     </div>
                     {venueData.length === 0 ? (
-                        <div style={{ ...S.poppins, color: '#3d6b4d', fontSize: 12 }}>Tidak ada data</div>
+                        <div style={{ ...S.poppins, color: S.muted, fontSize: 12 }}>Tidak ada data</div>
                     ) : (
                         venueData.map(([venue, count]) =>
                             renderBar(venue, count, maxVenue, getVenueColor(venue), `venue-${venue}`)
@@ -1210,18 +1273,14 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ musicUrls }) => {
             <audio ref={audioRef} onEnded={handleEnded} preload="none" />
             <div ref={ytContainerRef} style={{ position: 'fixed', top: -9999, left: -9999, width: 1, height: 1, overflow: 'hidden' }} />
             <div style={{
-                position: 'fixed',
-                bottom: 20,
-                right: 20,
-                zIndex: 100,
-                backgroundColor: '#0d3a22',
-                border: '1px solid #1a5c35',
+                backgroundColor: S.surfaceRaw,
+                border: '1px solid rgba(255,215,0,0.2)',
                 borderRadius: 30,
-                padding: '8px 16px',
+                padding: '6px 14px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                gap: 8,
+                boxShadow: '0 0 10px rgba(255,215,0,0.1)',
             }}>
                 {/* Track info */}
                 <div style={{
@@ -1309,7 +1368,13 @@ const CricketBoardCalendar: React.FC = () => {
     const [allVenueNames, setAllVenueNames] = useState<string[]>([]);
     const [headingFont, setHeadingFont] = useState('Orbitron');
     const [bodyFont, setBodyFont] = useState('Poppins');
+    const [customFonts, setCustomFonts] = useState<{ name: string; url: string }[]>([]);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [bgColor, setBgColor] = useState<string | null>(null);
+    const [autoSwitchMinutes, setAutoSwitchMinutes] = useState<number>(0);
+    const [videoEnabled, setVideoEnabled] = useState(true);
+    const [videoPlaceholderText, setVideoPlaceholderText] = useState('');
+    const [marqueeTexts, setMarqueeTexts] = useState<string[]>([]);
 
     // Fetch all venue names
     useEffect(() => {
@@ -1476,6 +1541,33 @@ const CricketBoardCalendar: React.FC = () => {
                     if (parsed.body) setBodyFont(parsed.body);
                 } catch { /* ignore */ }
             }
+
+            const { data: customFontData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_custom_fonts')
+                .maybeSingle();
+            if (customFontData?.value) {
+                try {
+                    const parsed = JSON.parse(customFontData.value);
+                    if (Array.isArray(parsed)) setCustomFonts(parsed);
+                } catch {}
+            }
+
+            const { data: marqueeData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_marquee_text')
+                .maybeSingle();
+            if (marqueeData?.value) {
+                try {
+                    const parsed = JSON.parse(marqueeData.value);
+                    if (Array.isArray(parsed)) setMarqueeTexts(parsed);
+                    else setMarqueeTexts([marqueeData.value]);
+                } catch {
+                    setMarqueeTexts([marqueeData.value]);
+                }
+            }
         };
         fetchFonts();
 
@@ -1488,6 +1580,21 @@ const CricketBoardCalendar: React.FC = () => {
                         if (parsed.heading) setHeadingFont(parsed.heading);
                         if (parsed.body) setBodyFont(parsed.body);
                     } catch { /* ignore */ }
+                }
+                if (payload.new?.key === 'calendar_custom_fonts') {
+                    try {
+                        const parsed = JSON.parse(payload.new.value || '[]');
+                        if (Array.isArray(parsed)) setCustomFonts(parsed);
+                    } catch {}
+                }
+                if (payload.new?.key === 'calendar_marquee_text') {
+                    try {
+                        const parsed = JSON.parse(payload.new.value || '[]');
+                        if (Array.isArray(parsed)) setMarqueeTexts(parsed);
+                        else setMarqueeTexts([payload.new.value]);
+                    } catch {
+                        setMarqueeTexts([payload.new.value]);
+                    }
                 }
             })
             .subscribe();
@@ -1521,6 +1628,128 @@ const CricketBoardCalendar: React.FC = () => {
         return () => { supabase.removeChannel(channel); };
     }, []);
 
+    // Fetch background color from site_settings
+    useEffect(() => {
+        const fetchBgColor = async () => {
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_bg_color')
+                .maybeSingle();
+            if (data?.value) {
+                setBgColor(data.value);
+            }
+        };
+        fetchBgColor();
+
+        const channel = supabase
+            .channel('calendar-bg-color-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new?.key === 'calendar_bg_color') {
+                    setBgColor(payload.new.value || null);
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Fetch video toggle + placeholder text from site_settings
+    useEffect(() => {
+        const fetchVideoToggle = async () => {
+            const { data: enabledData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_video_enabled')
+                .maybeSingle();
+            if (enabledData?.value !== undefined && enabledData?.value !== null) {
+                setVideoEnabled(enabledData.value !== 'false');
+            }
+
+            const { data: textData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_video_placeholder_text')
+                .maybeSingle();
+            if (textData?.value) {
+                setVideoPlaceholderText(textData.value);
+            }
+        };
+        fetchVideoToggle();
+
+        const channel = supabase
+            .channel('calendar-video-toggle-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new?.key === 'calendar_video_enabled') {
+                    setVideoEnabled(payload.new.value !== 'false');
+                }
+                if (payload.new?.key === 'calendar_video_placeholder_text') {
+                    setVideoPlaceholderText(payload.new.value || '');
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Fetch auto-switch interval from site_settings
+    useEffect(() => {
+        const fetchAutoSwitch = async () => {
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_auto_switch_minutes')
+                .maybeSingle();
+            if (data?.value) {
+                const parsed = parseInt(data.value, 10);
+                setAutoSwitchMinutes(isNaN(parsed) ? 0 : parsed);
+            }
+        };
+        fetchAutoSwitch();
+
+        const channel = supabase
+            .channel('calendar-auto-switch-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'site_settings' }, (payload: any) => {
+                if (payload.new?.key === 'calendar_auto_switch_minutes') {
+                    const parsed = parseInt(payload.new.value || '0', 10);
+                    setAutoSwitchMinutes(isNaN(parsed) ? 0 : parsed);
+                }
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
+
+    // Ref to hold current values so the interval callback avoids stale closures
+    const autoSwitchRef = useRef({ currentMonth, currentYear, calendarDateRange });
+    useEffect(() => {
+        autoSwitchRef.current = { currentMonth, currentYear, calendarDateRange };
+    }, [currentMonth, currentYear, calendarDateRange]);
+
+    // Auto-advance month every autoSwitchMinutes minutes
+    useEffect(() => {
+        if (autoSwitchMinutes <= 0) return;
+        const id = setInterval(() => {
+            const { currentMonth: cm, currentYear: cy, calendarDateRange: range } = autoSwitchRef.current;
+            let newMonth = cm === 11 ? 0 : cm + 1;
+            let newYear = cm === 11 ? cy + 1 : cy;
+
+            if (range) {
+                const { endMonth, endYear, startMonth, startYear } = range;
+                // endMonth/startMonth are 1-indexed in storage
+                if (newYear > endYear || (newYear === endYear && newMonth > endMonth - 1)) {
+                    newMonth = startMonth - 1;
+                    newYear = startYear;
+                }
+            }
+
+            setCurrentMonth(newMonth);
+            setCurrentYear(newYear);
+            setCompactDate(`${newYear}-${String(newMonth + 1).padStart(2, '0')}-01`);
+        }, autoSwitchMinutes * 60 * 1000);
+        return () => clearInterval(id);
+    }, [autoSwitchMinutes]);
+
     // Dynamically load Google Fonts when heading/body fonts change
     useEffect(() => {
         const families = [headingFont, bodyFont]
@@ -1539,6 +1768,50 @@ const CricketBoardCalendar: React.FC = () => {
         }
         link.href = href;
     }, [headingFont, bodyFont]);
+
+    useEffect(() => {
+        const id = 'custom-font-faces';
+        let style = document.getElementById(id) as HTMLStyleElement | null;
+        if (!style) {
+            style = document.createElement('style');
+            style.id = id;
+            document.head.appendChild(style);
+        }
+        style.textContent = customFonts.map(f => {
+            const ext = f.url.split('.').pop()?.toLowerCase();
+            const format = ext === 'woff2' ? 'woff2' : ext === 'woff' ? 'woff' : ext === 'otf' ? 'opentype' : 'truetype';
+            return `@font-face { font-family: '${f.name}'; src: url('${f.url}') format('${format}'); font-display: swap; }`;
+        }).join('\n');
+    }, [customFonts]);
+
+    // ── Update S based on bgColor ──────────────────────────────────────────
+    if (bgColor) {
+        S = {
+            ...S,
+            bg:      { backgroundColor: bgColor },
+            surface: { backgroundColor: adjustColor(bgColor, 12) },
+            panel:   { backgroundColor: adjustColor(bgColor, 6) },
+            border:  `1px solid ${adjustColor(bgColor, 30)}`,
+            bgRaw:      bgColor,
+            surfaceRaw: adjustColor(bgColor, 12),
+            panelRaw:   adjustColor(bgColor, 6),
+            borderRaw:  adjustColor(bgColor, 30),
+            muted:      adjustColor(bgColor, 40),
+        };
+    } else {
+        S = {
+            ...S,
+            bg:      { backgroundColor: DEFAULT_COLORS.bg },
+            surface: { backgroundColor: DEFAULT_COLORS.surface },
+            panel:   { backgroundColor: DEFAULT_COLORS.panel },
+            border:  `1px solid ${DEFAULT_COLORS.border}`,
+            bgRaw:      DEFAULT_COLORS.bg,
+            surfaceRaw: DEFAULT_COLORS.surface,
+            panelRaw:   DEFAULT_COLORS.panel,
+            borderRaw:  DEFAULT_COLORS.border,
+            muted:      adjustColor(DEFAULT_COLORS.bg, 40),
+        };
+    }
 
     // ── Calendar grid helpers ──────────────────────────────────────────────
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -1643,15 +1916,17 @@ const CricketBoardCalendar: React.FC = () => {
 
     const navBtnStyle: React.CSSProperties = {
         ...S.orbitron,
-        backgroundColor: '#0d3a22',
-        border: S.border,
+        backgroundColor: S.surfaceRaw,
+        border: '1px solid rgba(255,215,0,0.3)',
         color: S.gold,
-        borderRadius: 6,
-        padding: '6px 14px',
+        borderRadius: 8,
+        padding: '8px 18px',
         cursor: 'pointer',
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 700,
-        transition: 'background-color 0.2s, box-shadow 0.2s',
+        transition: 'all 0.3s ease',
+        boxShadow: '0 0 8px rgba(255,215,0,0.15)',
+        letterSpacing: '0.05em',
     };
 
     return (
@@ -1660,13 +1935,73 @@ const CricketBoardCalendar: React.FC = () => {
             minHeight: '100vh',
             ...S.poppins,
             position: 'relative',
-            overflow: 'hidden',
             '--font-heading': `'${headingFont}', monospace`,
             '--font-body': `'${bodyFont}', sans-serif`,
+            '--color-bg': S.bgRaw,
+            '--color-surface': S.surfaceRaw,
+            '--color-panel': S.panelRaw,
+            '--color-border': S.borderRaw,
         } as React.CSSProperties}>
+            <style>{`
+                @keyframes marquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                @keyframes marqueeShimmer {
+                    0%, 100% { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.3), 0 0 20px rgba(255,215,0,0.1); }
+                    25% { color: #FFF8DC; text-shadow: 0 0 15px rgba(255,215,0,0.6), 0 0 30px rgba(255,215,0,0.3), 0 0 50px rgba(255,215,0,0.15); }
+                    50% { color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.2); }
+                    75% { color: #FFEC8B; text-shadow: 0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2); }
+                }
+                .marquee-text-shimmer {
+                    animation: marqueeShimmer 3s ease-in-out infinite;
+                }
+                .marquee-separator {
+                    animation: marqueeShimmer 3s ease-in-out infinite 1.5s;
+                }
+                @keyframes neonPulse {
+                    0%, 100% { box-shadow: 0 0 5px rgba(255,215,0,0.3), 0 0 20px rgba(255,215,0,0.1); }
+                    50% { box-shadow: 0 0 10px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2), 0 0 60px rgba(255,215,0,0.1); }
+                }
+                @keyframes borderGlow {
+                    0%, 100% { border-color: rgba(255,215,0,0.3); }
+                    50% { border-color: rgba(255,215,0,0.7); }
+                }
+                @keyframes textGlow {
+                    0%, 100% { text-shadow: 0 0 10px rgba(255,215,0,0.3), 0 0 20px rgba(255,215,0,0.1); }
+                    50% { text-shadow: 0 0 15px rgba(255,215,0,0.6), 0 0 30px rgba(255,215,0,0.3), 0 0 45px rgba(255,215,0,0.1); }
+                }
+                .billboard-panel {
+                    border: 1px solid rgba(255,215,0,0.25) !important;
+                    animation: neonPulse 3s ease-in-out infinite;
+                    background: var(--color-panel) !important;
+                }
+                .billboard-header {
+                    background: linear-gradient(90deg, rgba(255,215,0,0.08) 0%, transparent 50%, rgba(255,215,0,0.08) 100%) !important;
+                    border-bottom: 1px solid rgba(255,215,0,0.2) !important;
+                }
+                .billboard-card {
+                    border: 1px solid rgba(255,215,0,0.15);
+                    background: var(--color-surface);
+                    transition: all 0.3s ease;
+                }
+                .billboard-card:hover {
+                    border-color: rgba(255,215,0,0.5);
+                    box-shadow: 0 0 15px rgba(255,215,0,0.2), inset 0 0 15px rgba(255,215,0,0.05);
+                    transform: translateX(3px);
+                }
+                .billboard-marquee {
+                    background: linear-gradient(90deg, rgba(255,215,0,0.05) 0%, rgba(255,215,0,0.12) 50%, rgba(255,215,0,0.05) 100%) !important;
+                    border: 1px solid rgba(255,215,0,0.3) !important;
+                    animation: borderGlow 2s ease-in-out infinite;
+                }
+                .compact-month-title {
+                    animation: textGlow 2.5s ease-in-out infinite;
+                }
+            `}</style>
 
             {/* Video Background (calendar mode only — compact has its own video panel) */}
-            {bgVideoUrls.length > 0 && viewMode === 'calendar' && (
+            {bgVideoUrls.length > 0 && viewMode === 'calendar' && videoEnabled && (
                 <video
                     autoPlay
                     loop
@@ -1690,18 +2025,23 @@ const CricketBoardCalendar: React.FC = () => {
             )}
 
             {/* ── HEADER ────────────────────────────────────────────────── */}
-            <div style={{
-                ...S.surface,
-                borderBottom: S.border,
-                padding: '16px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 12,
-                position: 'relative',
-                zIndex: 1,
-            }}>
+            <motion.div
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                style={{
+                    ...S.surface,
+                    borderBottom: S.border,
+                    padding: '10px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                    position: 'relative',
+                    zIndex: 1,
+                }}
+            >
                 {/* Logo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     {logoUrl && (
@@ -1709,7 +2049,7 @@ const CricketBoardCalendar: React.FC = () => {
                             src={logoUrl}
                             alt="Logo"
                             style={{
-                                height: 48,
+                                height: 40,
                                 width: 'auto',
                                 objectFit: 'contain',
                                 flexShrink: 0,
@@ -1719,7 +2059,10 @@ const CricketBoardCalendar: React.FC = () => {
                     )}
                 </div>
 
-                {/* Mode toggle + Clock */}
+                {/* Music Player + Mode toggle + Clock */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {bgMusicUrls.length > 0 && <MusicPlayer musicUrls={bgMusicUrls} />}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     {/* Mode toggle */}
                     <div style={{
@@ -1739,7 +2082,7 @@ const CricketBoardCalendar: React.FC = () => {
                                 border: 'none',
                                 letterSpacing: '0.05em',
                                 transition: 'all 0.2s',
-                                backgroundColor: viewMode === 'compact' ? '#1a5c35' : '#0d3a22',
+                                backgroundColor: viewMode === 'compact' ? S.borderRaw : S.surfaceRaw,
                                 color: viewMode === 'compact' ? S.gold : '#6B7280',
                                 boxShadow: viewMode === 'compact' ? `inset 0 0 10px rgba(255,215,0,0.15)` : 'none',
                             }}
@@ -1758,7 +2101,7 @@ const CricketBoardCalendar: React.FC = () => {
                                 borderLeft: S.border,
                                 letterSpacing: '0.05em',
                                 transition: 'all 0.2s',
-                                backgroundColor: viewMode === 'calendar' ? '#1a5c35' : '#0d3a22',
+                                backgroundColor: viewMode === 'calendar' ? S.borderRaw : S.surfaceRaw,
                                 color: viewMode === 'calendar' ? S.gold : '#6B7280',
                                 boxShadow: viewMode === 'calendar' ? `inset 0 0 10px rgba(255,215,0,0.15)` : 'none',
                             }}
@@ -1772,110 +2115,137 @@ const CricketBoardCalendar: React.FC = () => {
                         <div style={{
                             ...S.orbitron,
                             color: S.gold,
-                            fontSize: 'clamp(20px, 3vw, 30px)',
+                            fontSize: 'clamp(16px, 2.5vw, 24px)',
                             fontWeight: 700,
                             textShadow: S.glow,
                             letterSpacing: '0.08em',
                         }}>
                             {timeStr}
                         </div>
-                        <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 11, marginTop: 2 }}>
+                        <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 11, marginTop: 1 }}>
                             {dateStr}
                         </div>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* ── COMPACT VIEW ──────────────────────────────────────── */}
-            {viewMode === 'compact' && (
-                <div style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            {viewMode === 'compact' && (<>
+                <div key={`compact-${currentMonth}-${currentYear}`} style={{ padding: '10px 20px 80px 20px', margin: '0 auto', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
                     {/* Month navigation for compact mode */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 12,
-                        marginBottom: 14,
-                    }}>
-                        <button style={navBtnStyle} onClick={prevMonthNav}
-                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = '#132f1e'; }}
-                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = '#0d3a22'; }}
-                        >◀</button>
+                    <motion.div
+                        initial={{ opacity: 0, y: 25 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
+                    >
                         <div style={{
-                            ...S.orbitron,
-                            color: S.gold,
-                            fontSize: 'clamp(14px, 3vw, 18px)',
-                            fontWeight: 700,
-                            textShadow: S.glow,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12,
+                            marginBottom: 8,
                         }}>
-                            {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
+                            <button style={navBtnStyle} onClick={prevMonthNav}
+                                onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = S.panelRaw; }}
+                                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = S.surfaceRaw; }}
+                            >◀</button>
+                            <div className="compact-month-title" style={{
+                                ...S.orbitron,
+                                color: S.gold,
+                                fontSize: 'clamp(18px, 3vw, 28px)',
+                                fontWeight: 900,
+                                letterSpacing: '0.15em',
+                                textShadow: `0 0 10px rgba(255,215,0,0.4), 0 0 30px rgba(255,215,0,0.2), 0 0 50px rgba(255,215,0,0.1)`,
+                            }}>
+                                {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
+                            </div>
+                            <button style={navBtnStyle} onClick={nextMonthNav}
+                                onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = S.panelRaw; }}
+                                onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = S.surfaceRaw; }}
+                            >▶</button>
                         </div>
-                        <button style={navBtnStyle} onClick={nextMonthNav}
-                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = '#132f1e'; }}
-                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = '#0d3a22'; }}
-                        >▶</button>
-                    </div>
+                    </motion.div>
 
-                    {/* Video — full width */}
-                    <div style={{ marginBottom: 16 }}>
-                        <VideoPanel videoUrls={bgVideoUrls} />
-                    </div>
-
-                    {/* Tanggal Cantik + Event Chart (left) | Venue Availability (right) — 2 columns */}
+                    {/* 3 columns: Tanggal Cantik | Video (landscape) | Venue Availability */}
                     <div className="compact-grid" style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: 16,
+                        gridTemplateColumns: '1fr 2fr 1fr',
+                        gap: 12,
+                        alignItems: 'stretch',
+                        flex: 1,
+                        minHeight: 0,
                     }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            <TanggalCantik
-                                year={currentYear}
-                                month={currentMonth}
-                                deals={deals}
-                                onSelectDate={(dateStr) => setCompactDate(dateStr)}
-                            />
-                            <EventChart
-                                monthDeals={monthDeals}
-                                monthLabel={`${INDONESIAN_MONTHS[currentMonth].toUpperCase()} ${currentYear}`}
-                            />
-                        </div>
+                        <TanggalCantik
+                            year={currentYear}
+                            month={currentMonth}
+                            deals={deals}
+                            onSelectDate={(dateStr) => setCompactDate(dateStr)}
+                            baseDelay={0.25}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.45, ease: 'easeOut' }}
+                            style={{ height: '100%' }}
+                        >
+                            <VideoPanel videoUrls={bgVideoUrls} enabled={videoEnabled} placeholderText={videoPlaceholderText} />
+                        </motion.div>
                         <VenueAvailability
                             deals={deals}
                             selectedDate={compactDate}
                             onDateChange={(dateStr) => setCompactDate(dateStr)}
                             onToday={() => setCompactDate(dateUtils.getTodayString())}
                             venueNames={allVenueNames}
+                            baseDelay={0.65}
+                            compact
                         />
                     </div>
-
-                    {/* Stats summary */}
-                    <div style={{
-                        ...S.panel,
-                        border: S.border,
-                        borderRadius: 10,
-                        padding: '14px 16px',
-                        marginTop: 16,
-                        transition: 'box-shadow 0.3s',
-                        boxShadow: flash ? `0 0 30px rgba(255,215,0,0.25)` : 'none',
-                    }}>
-                        <div style={{ ...S.orbitron, color: S.gold, fontSize: 11, letterSpacing: '0.1em', marginBottom: 10, textShadow: S.glow }}>
-                            INNINGS SUMMARY — {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
-                        </div>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            <StatPanel label="Total Events" value={monthDeals.length} color={S.gold} flash={flash} />
-                            <StatPanel label="Soft Booking" value={countBy('Soft Booking')} color="#8B5CF6" flash={flash} />
-                            <StatPanel label="Booking"      value={countBy('Booking')}      color="#3B82F6" flash={flash} />
-                            <StatPanel label="DP"           value={countBy('DP')}           color="#F59E0B" flash={flash} />
-                            <StatPanel label="Lunas"        value={countBy('Lunas')}        color="#10B981" flash={flash} />
-                            <StatPanel label="Waiting List" value={countBy('Waiting List')} color="#6B7280" flash={flash} />
+                </div>
+                {marqueeTexts.length > 0 && (
+                    <div
+                        className="billboard-marquee"
+                        style={{
+                            borderRadius: 10,
+                            padding: '14px 0',
+                            marginTop: 12,
+                            overflow: 'hidden',
+                            position: 'relative',
+                        }}
+                    >
+                        <div style={{
+                            display: 'inline-flex',
+                            whiteSpace: 'nowrap',
+                            animation: 'marquee 60s linear infinite',
+                        }}>
+                            {[0, 1].map(copy => (
+                                <span key={copy} style={{
+                                    ...S.orbitron,
+                                    fontSize: 22,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.05em',
+                                    paddingRight: 60,
+                                }}>
+                                    {marqueeTexts.map((text, i) => (
+                                        <React.Fragment key={i}>
+                                            {i > 0 && <span className="marquee-separator" style={{ margin: '0 24px', opacity: 0.5 }}>{' ✦ '}</span>}
+                                            <span className="marquee-text-shimmer">{text}</span>
+                                        </React.Fragment>
+                                    ))}
+                                </span>
+                            ))}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </>)}
 
             {/* ── CALENDAR VIEW ────────────────────────────────────────── */}
             {viewMode === 'calendar' && (
-            <div style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+            <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+                style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1 }}
+            >
 
                 {/* ── STATS PANEL ───────────────────────────────────────── */}
                 <div style={{
@@ -1891,12 +2261,12 @@ const CricketBoardCalendar: React.FC = () => {
                         INNINGS SUMMARY — {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
                     </div>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <StatPanel label="Total Events" value={monthDeals.length} color={S.gold} flash={flash} />
-                        <StatPanel label="Soft Booking" value={countBy('Soft Booking')} color="#8B5CF6" flash={flash} />
-                        <StatPanel label="Booking"      value={countBy('Booking')}      color="#3B82F6" flash={flash} />
-                        <StatPanel label="DP"           value={countBy('DP')}           color="#F59E0B" flash={flash} />
-                        <StatPanel label="Lunas"        value={countBy('Lunas')}        color="#10B981" flash={flash} />
-                        <StatPanel label="Waiting List" value={countBy('Waiting List')} color="#6B7280" flash={flash} />
+                        <StatPanel label="Total Events" value={monthDeals.length} color={S.gold} flash={flash} index={0} />
+                        <StatPanel label="Soft Booking" value={countBy('Soft Booking')} color="#8B5CF6" flash={flash} index={1} />
+                        <StatPanel label="Booking"      value={countBy('Booking')}      color="#3B82F6" flash={flash} index={2} />
+                        <StatPanel label="DP"           value={countBy('DP')}           color="#F59E0B" flash={flash} index={3} />
+                        <StatPanel label="Lunas"        value={countBy('Lunas')}        color="#10B981" flash={flash} index={4} />
+                        <StatPanel label="Waiting List" value={countBy('Waiting List')} color="#6B7280" flash={flash} index={5} />
                     </div>
                 </div>
 
@@ -1946,14 +2316,14 @@ const CricketBoardCalendar: React.FC = () => {
                 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <button style={navBtnStyle} onClick={prevMonthNav}
-                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = '#132f1e'; }}
-                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = '#0d3a22'; }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = S.panelRaw; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = S.surfaceRaw; }}
                         >
                             ◀ PREV
                         </button>
                         <button style={navBtnStyle} onClick={goToday}
-                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = '#132f1e'; }}
-                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = '#0d3a22'; }}
+                            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = S.panelRaw; }}
+                            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = S.surfaceRaw; }}
                         >
                             TODAY
                         </button>
@@ -1969,8 +2339,8 @@ const CricketBoardCalendar: React.FC = () => {
                         {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
                     </div>
                     <button style={navBtnStyle} onClick={nextMonthNav}
-                        onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = '#132f1e'; }}
-                        onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = '#0d3a22'; }}
+                        onMouseEnter={e => { e.currentTarget.style.boxShadow = S.glow; e.currentTarget.style.backgroundColor = S.panelRaw; }}
+                        onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.backgroundColor = S.surfaceRaw; }}
                     >
                         NEXT ▶
                     </button>
@@ -2023,7 +2393,7 @@ const CricketBoardCalendar: React.FC = () => {
                                         ...S.panel,
                                         border: isToday
                                             ? `2px solid ${S.gold}`
-                                            : '1px solid #1a5c3544',
+                                            : `1px solid ${S.border.replace('1px solid ', '')}44`,
                                         borderRadius: 0,
                                         minHeight: 110,
                                         padding: 4,
@@ -2031,15 +2401,15 @@ const CricketBoardCalendar: React.FC = () => {
                                         boxShadow: isToday ? `inset 0 0 12px rgba(255,215,0,0.12)` : 'none',
                                         transition: 'background-color 0.15s',
                                     }}
-                                    onMouseEnter={e => { if (!isToday) e.currentTarget.style.backgroundColor = '#0d3a22'; }}
-                                    onMouseLeave={e => { if (!isToday) e.currentTarget.style.backgroundColor = '#132f1e'; }}
+                                    onMouseEnter={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.surface.backgroundColor as string; }}
+                                    onMouseLeave={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.panel.backgroundColor as string; }}
                                 >
                                     {/* Date number */}
                                     <div style={{
                                         ...S.orbitron,
                                         fontSize: 12,
                                         fontWeight: 700,
-                                        color: isToday ? S.gold : cell.isCurrentMonth ? '#A7C4A0' : '#3d6b4d',
+                                        color: isToday ? S.gold : cell.isCurrentMonth ? S.white : S.muted,
                                         textAlign: 'right',
                                         textShadow: isToday ? S.glow : 'none',
                                         marginBottom: 3,
@@ -2064,8 +2434,8 @@ const CricketBoardCalendar: React.FC = () => {
                                             onClick={(e) => { e.stopPropagation(); setOverflowDay({ dateStr: cell.dateStr, deals: dayDeals }); }}
                                             style={{
                                                 ...S.poppins,
-                                                backgroundColor: '#1a5c3588',
-                                                border: '1px solid #1a5c35',
+                                                backgroundColor: `${S.border.replace('1px solid ', '')}88`,
+                                                border: S.border,
                                                 color: S.gold,
                                                 borderRadius: 4,
                                                 padding: '1px 5px',
@@ -2085,24 +2455,27 @@ const CricketBoardCalendar: React.FC = () => {
                     </div>
                 )}
 
-            </div>
+            </motion.div>
             )}
 
-            {/* ── MUSIC PLAYER ─────────────────────────────────────────── */}
-            {bgMusicUrls.length > 0 && <MusicPlayer musicUrls={bgMusicUrls} />}
+            {/* Music player moved to header */}
 
             {/* ── MODALS ───────────────────────────────────────────────── */}
-            {selectedDeal && (
-                <EventDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
-            )}
-            {overflowDay && (
-                <DayOverflowPopup
-                    date={overflowDay.dateStr}
-                    deals={overflowDay.deals}
-                    onClose={() => setOverflowDay(null)}
-                    onSelectDeal={setSelectedDeal}
-                />
-            )}
+            <AnimatePresence>
+                {selectedDeal && (
+                    <EventDetailModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {overflowDay && (
+                    <DayOverflowPopup
+                        date={overflowDay.dateStr}
+                        deals={overflowDay.deals}
+                        onClose={() => setOverflowDay(null)}
+                        onSelectDeal={setSelectedDeal}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* ── KEYFRAME ANIMATION ───────────────────────────────────── */}
             <style>{`
@@ -2117,11 +2490,11 @@ const CricketBoardCalendar: React.FC = () => {
                 }
 
                 ::-webkit-scrollbar { width: 6px; height: 6px; }
-                ::-webkit-scrollbar-track { background: #0a2e1a; }
-                ::-webkit-scrollbar-thumb { background: #1a5c35; border-radius: 3px; }
+                ::-webkit-scrollbar-track { background: ${S.bg.backgroundColor}; }
+                ::-webkit-scrollbar-thumb { background: ${S.border.replace('1px solid ', '')}; border-radius: 3px; }
                 ::-webkit-scrollbar-thumb:hover { background: #FFD700; }
 
-                @media (max-width: 1024px) {
+                @media (max-width: 1200px) {
                     .compact-grid { grid-template-columns: 1fr !important; }
                     .event-chart-grid { grid-template-columns: 1fr !important; }
                 }

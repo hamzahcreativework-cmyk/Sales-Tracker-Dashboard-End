@@ -23,6 +23,14 @@ const MONTHS_ID = [
 const HEADING_FONTS = ['Orbitron', 'Rajdhani', 'Teko', 'Oswald', 'Bebas Neue', 'Russo One', 'Chakra Petch', 'Black Ops One'];
 const BODY_FONTS = ['Poppins', 'Inter', 'Roboto', 'Open Sans', 'Nunito', 'Lato', 'Montserrat', 'DM Sans', 'Quicksand'];
 
+function adjustColor(hex: string, amount: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, ((num >> 16) & 0xff) + amount);
+    const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+    const b = Math.min(255, (num & 0xff) + amount);
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
     const [videoUrls, setVideoUrls] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -46,12 +54,37 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
     const [calendarFonts, setCalendarFonts] = useState({ heading: 'Orbitron', body: 'Poppins' });
     const [isLoadingFonts, setIsLoadingFonts] = useState(true);
     const [isSavingFonts, setIsSavingFonts] = useState(false);
+    const [customFonts, setCustomFonts] = useState<{ name: string; url: string }[]>([]);
+    const [isUploadingFont, setIsUploadingFont] = useState(false);
+    const fontFileInputRef = useRef<HTMLInputElement>(null);
+    const fontFileInputBodyRef = useRef<HTMLInputElement>(null);
 
     // Logo state
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [isLoadingLogo, setIsLoadingLogo] = useState(true);
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Calendar background color state
+    const [bgColor, setBgColor] = useState('#0a2e1a');
+    const [isLoadingBgColor, setIsLoadingBgColor] = useState(true);
+    const [isSavingBgColor, setIsSavingBgColor] = useState(false);
+
+    // Auto switch month interval state
+    const [autoSwitchMinutes, setAutoSwitchMinutes] = useState<number>(0);
+    const [isLoadingAutoSwitch, setIsLoadingAutoSwitch] = useState(true);
+    const [isSavingAutoSwitch, setIsSavingAutoSwitch] = useState(false);
+
+    // Video toggle state
+    const [videoEnabled, setVideoEnabled] = useState(true);
+    const [videoPlaceholderText, setVideoPlaceholderText] = useState('');
+    const [isLoadingVideoToggle, setIsLoadingVideoToggle] = useState(true);
+    const [isSavingVideoToggle, setIsSavingVideoToggle] = useState(false);
+
+    // Marquee text state
+    const [marqueeTexts, setMarqueeTexts] = useState<string[]>([]);
+    const [isLoadingMarquee, setIsLoadingMarquee] = useState(true);
+    const [isSavingMarquee, setIsSavingMarquee] = useState(false);
 
     // Gacha prize state
     const [gachaPrizes, setGachaPrizes] = useState<GachaPrize[]>([]);
@@ -180,6 +213,17 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                     }
                 } catch {}
             }
+            const { data: customData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_custom_fonts')
+                .maybeSingle();
+            if (customData?.value) {
+                try {
+                    const parsed = JSON.parse(customData.value);
+                    if (Array.isArray(parsed)) setCustomFonts(parsed);
+                } catch {}
+            }
             setIsLoadingFonts(false);
         };
         fetchFonts();
@@ -202,6 +246,39 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
     }, []);
 
     useEffect(() => {
+        const fetchBgColor = async () => {
+            setIsLoadingBgColor(true);
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_bg_color')
+                .maybeSingle();
+            if (data?.value) {
+                setBgColor(data.value);
+            }
+            setIsLoadingBgColor(false);
+        };
+        fetchBgColor();
+    }, []);
+
+    useEffect(() => {
+        const fetchAutoSwitch = async () => {
+            setIsLoadingAutoSwitch(true);
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_auto_switch_minutes')
+                .maybeSingle();
+            if (data?.value) {
+                const parsed = parseInt(data.value, 10);
+                if (!isNaN(parsed)) setAutoSwitchMinutes(parsed);
+            }
+            setIsLoadingAutoSwitch(false);
+        };
+        fetchAutoSwitch();
+    }, []);
+
+    useEffect(() => {
         const families = [calendarFonts.heading, calendarFonts.body]
             .filter(Boolean)
             .map(f => f.replace(/ /g, '+') + ':wght@400;600;700;800;900')
@@ -218,6 +295,68 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
         }
         link.href = href;
     }, [calendarFonts.heading, calendarFonts.body]);
+
+    useEffect(() => {
+        const id = 'custom-font-faces';
+        let style = document.getElementById(id) as HTMLStyleElement | null;
+        if (!style) {
+            style = document.createElement('style');
+            style.id = id;
+            document.head.appendChild(style);
+        }
+        style.textContent = customFonts.map(f => {
+            const ext = f.url.split('.').pop()?.toLowerCase();
+            const format = ext === 'woff2' ? 'woff2' : ext === 'woff' ? 'woff' : ext === 'otf' ? 'opentype' : 'truetype';
+            return `@font-face { font-family: '${f.name}'; src: url('${f.url}') format('${format}'); font-display: swap; }`;
+        }).join('\n');
+    }, [customFonts]);
+
+    useEffect(() => {
+        const fetchVideoToggle = async () => {
+            setIsLoadingVideoToggle(true);
+            const { data: enabledData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_video_enabled')
+                .maybeSingle();
+            if (enabledData?.value !== undefined && enabledData?.value !== null) {
+                setVideoEnabled(enabledData.value !== 'false');
+            }
+
+            const { data: textData } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_video_placeholder_text')
+                .maybeSingle();
+            if (textData?.value) {
+                setVideoPlaceholderText(textData.value);
+            }
+            setIsLoadingVideoToggle(false);
+        };
+        fetchVideoToggle();
+    }, []);
+
+    useEffect(() => {
+        const fetchMarquee = async () => {
+            setIsLoadingMarquee(true);
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'calendar_marquee_text')
+                .maybeSingle();
+            if (data?.value) {
+                try {
+                    const parsed = JSON.parse(data.value);
+                    if (Array.isArray(parsed)) setMarqueeTexts(parsed);
+                    else setMarqueeTexts([data.value]);
+                } catch {
+                    setMarqueeTexts([data.value]);
+                }
+            }
+            setIsLoadingMarquee(false);
+        };
+        fetchMarquee();
+    }, []);
 
     useEffect(() => {
         const fetchPrizes = async () => {
@@ -463,6 +602,41 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
         setIsSavingRange(false);
     };
 
+    const handleUploadFont = async (file: File, target: 'heading' | 'body') => {
+        if (!file) return;
+        setIsUploadingFont(true);
+        try {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            if (!['woff', 'woff2', 'ttf', 'otf'].includes(ext || '')) {
+                alert('Format file tidak didukung. Gunakan .woff, .woff2, .ttf, atau .otf');
+                setIsUploadingFont(false);
+                return;
+            }
+            const fontName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+            const filePath = `fonts/${Date.now()}-${file.name}`;
+            const { error: uploadError } = await supabase.storage.from('site-assets').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data: urlData } = supabase.storage.from('site-assets').getPublicUrl(filePath);
+            const fontUrl = urlData.publicUrl;
+
+            const newCustomFont = { name: fontName, url: fontUrl };
+            const updatedCustomFonts = [...customFonts.filter(f => f.name !== fontName), newCustomFont];
+            setCustomFonts(updatedCustomFonts);
+
+            await supabase.from('site_settings').upsert(
+                { key: 'calendar_custom_fonts', value: JSON.stringify(updatedCustomFonts), updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+
+            setCalendarFonts(prev => ({ ...prev, [target]: fontName }));
+            alert(`Font "${fontName}" berhasil diupload!`);
+        } catch (error: any) {
+            console.error('Font upload error:', error);
+            alert('Gagal upload font: ' + error.message);
+        }
+        setIsUploadingFont(false);
+    };
+
     const handleSaveFonts = async () => {
         setIsSavingFonts(true);
         const { error } = await supabase
@@ -563,6 +737,83 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
 
         setLogoUrl(null);
         setIsUploadingLogo(false);
+    };
+
+    const handleSaveBgColor = async () => {
+        setIsSavingBgColor(true);
+        const { error } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_bg_color', value: bgColor, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+        if (error) {
+            console.error('Save bg color error:', error);
+            alert('Gagal menyimpan warna background: ' + error.message);
+        } else {
+            alert('Warna background berhasil disimpan.');
+        }
+        setIsSavingBgColor(false);
+    };
+
+    const handleSaveAutoSwitch = async () => {
+        setIsSavingAutoSwitch(true);
+        const { error } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_auto_switch_minutes', value: String(autoSwitchMinutes), updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+        if (error) {
+            console.error('Save auto switch error:', error);
+            alert('Gagal menyimpan pengaturan auto switch: ' + error.message);
+        } else {
+            alert('Pengaturan auto switch berhasil disimpan.');
+        }
+        setIsSavingAutoSwitch(false);
+    };
+
+    const handleSaveMarquee = async () => {
+        setIsSavingMarquee(true);
+        try {
+            const filtered = marqueeTexts.filter(t => t.trim());
+            const { error } = await supabase
+                .from('site_settings')
+                .upsert(
+                    { key: 'calendar_marquee_text', value: JSON.stringify(filtered), updated_at: new Date().toISOString() },
+                    { onConflict: 'key' }
+                );
+            if (error) throw error;
+            setMarqueeTexts(filtered);
+            alert('Teks marquee berhasil disimpan.');
+        } catch (error: any) {
+            console.error('Save marquee error:', error);
+            alert('Gagal menyimpan teks marquee: ' + error.message);
+        }
+        setIsSavingMarquee(false);
+    };
+
+    const handleSaveVideoToggle = async () => {
+        setIsSavingVideoToggle(true);
+        const { error: err1 } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_video_enabled', value: String(videoEnabled), updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+        const { error: err2 } = await supabase
+            .from('site_settings')
+            .upsert(
+                { key: 'calendar_video_placeholder_text', value: videoPlaceholderText, updated_at: new Date().toISOString() },
+                { onConflict: 'key' }
+            );
+        if (err1 || err2) {
+            console.error('Save video toggle error:', err1 || err2);
+            alert('Gagal menyimpan pengaturan video: ' + (err1?.message || err2?.message));
+        } else {
+            alert('Pengaturan video berhasil disimpan.');
+        }
+        setIsSavingVideoToggle(false);
     };
 
     const refreshPrizes = async () => {
@@ -776,6 +1027,350 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                             <p className="text-xs text-[var(--color-text-secondary)] mt-2">
                                 Format: JPG, PNG, GIF, WebP, SVG. Maksimal 5MB. Rekomendasi: latar belakang transparan (PNG/SVG).
                             </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Warna Background Kalender */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Warna Background Kalender</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Atur warna background utama untuk halaman kalender publik (/calendar.html)
+                </p>
+
+                {isLoadingBgColor ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {/* Color picker row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0">Background</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="color"
+                                    value={bgColor}
+                                    onChange={e => setBgColor(e.target.value)}
+                                    disabled={isSavingBgColor}
+                                    className="w-10 h-10 rounded-lg border border-[var(--color-border)] cursor-pointer"
+                                    style={{ padding: 2 }}
+                                />
+                                <input
+                                    type="text"
+                                    value={bgColor}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        if (/^#[0-9a-fA-F]{0,6}$/.test(val)) setBgColor(val);
+                                    }}
+                                    disabled={isSavingBgColor}
+                                    className="form-input py-2 px-3 text-sm w-28 font-mono"
+                                    maxLength={7}
+                                    placeholder="#0a2e1a"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Preset colors */}
+                        <div>
+                            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">Preset Warna</p>
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { color: '#0a2e1a', label: 'Hijau' },
+                                    { color: '#1a1a2e', label: 'Navy' },
+                                    { color: '#2e1a1a', label: 'Merah' },
+                                    { color: '#1a1a1a', label: 'Hitam' },
+                                    { color: '#2e2e1a', label: 'Olive' },
+                                    { color: '#1a2e2e', label: 'Teal' },
+                                ].map(preset => (
+                                    <button
+                                        key={preset.color}
+                                        onClick={() => setBgColor(preset.color)}
+                                        disabled={isSavingBgColor}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors text-xs font-medium ${
+                                            bgColor === preset.color
+                                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                                : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/50'
+                                        }`}
+                                    >
+                                        <span
+                                            className="w-4 h-4 rounded-full border border-white/20 shrink-0"
+                                            style={{ backgroundColor: preset.color }}
+                                        />
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className="border border-[var(--color-border)] rounded-xl p-4 bg-[var(--color-surface)]">
+                            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Preview</p>
+                            <div
+                                className="rounded-lg p-4 border"
+                                style={{
+                                    backgroundColor: bgColor,
+                                    borderColor: adjustColor(bgColor, 40),
+                                }}
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div
+                                        className="rounded-md px-3 py-1.5 text-xs font-bold"
+                                        style={{
+                                            backgroundColor: adjustColor(bgColor, 15),
+                                            color: '#FFD700',
+                                            fontFamily: "'Orbitron', monospace",
+                                        }}
+                                    >
+                                        SAMPLE HEADER
+                                    </div>
+                                </div>
+                                <div
+                                    className="rounded-md p-2 text-xs"
+                                    style={{
+                                        backgroundColor: adjustColor(bgColor, 8),
+                                        color: '#E8F5E9',
+                                        fontFamily: "'Poppins', sans-serif",
+                                    }}
+                                >
+                                    Preview konten kalender dengan warna background ini
+                                </div>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            Warna saat ini: {bgColor}
+                        </p>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={handleSaveBgColor}
+                                disabled={isSavingBgColor}
+                                className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingBgColor ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <span>Menyimpan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Simpan</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Video Panel Toggle */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Tampilan Video Kalender</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Aktifkan atau nonaktifkan panel video di halaman kalender publik (/calendar.html). Jika dinonaktifkan, akan tampil placeholder dengan teks kustom.
+                </p>
+
+                {isLoadingVideoToggle ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {/* Toggle */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0">Status Video</label>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setVideoEnabled(true)}
+                                    disabled={isSavingVideoToggle}
+                                    className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
+                                        videoEnabled
+                                            ? 'border-green-500 bg-green-500/10 text-green-400'
+                                            : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-green-500/50'
+                                    }`}
+                                >
+                                    ON — Tampilkan Video
+                                </button>
+                                <button
+                                    onClick={() => setVideoEnabled(false)}
+                                    disabled={isSavingVideoToggle}
+                                    className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
+                                        !videoEnabled
+                                            ? 'border-red-500 bg-red-500/10 text-red-400'
+                                            : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-red-500/50'
+                                    }`}
+                                >
+                                    OFF — Tampilkan Placeholder
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Placeholder text (only visible when OFF) */}
+                        {!videoEnabled && (
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                                <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0 pt-2">Teks Placeholder</label>
+                                <div className="flex-grow">
+                                    <input
+                                        type="text"
+                                        value={videoPlaceholderText}
+                                        onChange={e => setVideoPlaceholderText(e.target.value)}
+                                        disabled={isSavingVideoToggle}
+                                        className="form-input w-full py-2 px-3 text-sm"
+                                        placeholder="Contoh: Segera hadir - Stay tuned!"
+                                        maxLength={200}
+                                    />
+                                    <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                                        Teks ini akan ditampilkan di area video saat video dinonaktifkan. Maksimal 200 karakter.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Preview */}
+                        <div className="border border-[var(--color-border)] rounded-xl p-4 bg-[var(--color-surface)]">
+                            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Preview</p>
+                            <div
+                                className="rounded-lg overflow-hidden border border-[var(--color-border)]"
+                                style={{ paddingBottom: '30%', position: 'relative' }}
+                            >
+                                {videoEnabled ? (
+                                    <div style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        backgroundColor: '#000',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <span className="text-white/50 text-sm">Video akan ditampilkan di sini</span>
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        backgroundColor: '#FFFFFF',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <span style={{ color: '#6B7280', fontSize: 14, fontWeight: 600, textAlign: 'center', padding: '0 16px' }}>
+                                            {videoPlaceholderText || 'Video tidak tersedia'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            Status saat ini: {videoEnabled ? 'Video aktif' : 'Placeholder aktif'}
+                        </p>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={handleSaveVideoToggle}
+                                disabled={isSavingVideoToggle}
+                                className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingVideoToggle ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <span>Menyimpan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Simpan</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Marquee Text Settings */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Marquee Text Kalender</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Atur teks berjalan (marquee) yang ditampilkan di halaman kalender mode compact. Bisa menambahkan beberapa teks.
+                </p>
+
+                {isLoadingMarquee ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {marqueeTexts.map((text, index) => (
+                            <div key={index} className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-[var(--color-text-secondary)] w-6 shrink-0">{index + 1}.</span>
+                                <input
+                                    type="text"
+                                    value={text}
+                                    onChange={e => {
+                                        const updated = [...marqueeTexts];
+                                        updated[index] = e.target.value;
+                                        setMarqueeTexts(updated);
+                                    }}
+                                    disabled={isSavingMarquee}
+                                    placeholder="Masukkan teks marquee..."
+                                    className="form-input py-2 px-3 text-sm flex-1"
+                                />
+                                <button
+                                    onClick={() => setMarqueeTexts(marqueeTexts.filter((_, i) => i !== index))}
+                                    disabled={isSavingMarquee}
+                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                    title="Hapus"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        ))}
+
+                        <button
+                            onClick={() => setMarqueeTexts([...marqueeTexts, ''])}
+                            disabled={isSavingMarquee}
+                            className="flex items-center gap-2 text-sm text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors disabled:opacity-50"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>Tambah Teks Marquee</span>
+                        </button>
+
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            Hapus semua item untuk menyembunyikan marquee. Setiap teks akan dipisahkan dengan simbol di marquee.
+                        </p>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={handleSaveMarquee}
+                                disabled={isSavingMarquee}
+                                className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingMarquee ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <span>Menyimpan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Simpan</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 )}
@@ -1002,6 +1597,93 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                 )}
             </div>
 
+            {/* Auto Switch Bulan Kalender */}
+            <div className="card p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Auto Switch Bulan Kalender</h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                    Atur interval otomatis pergantian bulan di halaman kalender publik (/calendar.html). Set ke 0 untuk menonaktifkan.
+                </p>
+
+                {isLoadingAutoSwitch ? (
+                    <div className="flex items-center justify-center h-24">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {/* Input row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0">Interval (menit)</label>
+                            <input
+                                type="number"
+                                value={autoSwitchMinutes}
+                                onChange={e => setAutoSwitchMinutes(Math.max(0, Math.min(60, parseInt(e.target.value) || 0)))}
+                                disabled={isSavingAutoSwitch}
+                                min={0}
+                                max={60}
+                                className="form-input py-2 px-3 text-sm w-full sm:w-28"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        {/* Quick presets */}
+                        <div>
+                            <p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">Preset Interval</p>
+                            <div className="flex flex-wrap gap-2">
+                                {[
+                                    { value: 0, label: 'Off' },
+                                    { value: 1, label: '1 Menit' },
+                                    { value: 2, label: '2 Menit' },
+                                    { value: 3, label: '3 Menit' },
+                                    { value: 5, label: '5 Menit' },
+                                    { value: 10, label: '10 Menit' },
+                                ].map(preset => (
+                                    <button
+                                        key={preset.value}
+                                        onClick={() => setAutoSwitchMinutes(preset.value)}
+                                        disabled={isSavingAutoSwitch}
+                                        className={`px-3 py-1.5 rounded-lg border transition-colors text-xs font-medium ${
+                                            autoSwitchMinutes === preset.value
+                                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                                                : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/50'
+                                        }`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-[var(--color-text-secondary)]">
+                            {autoSwitchMinutes > 0
+                                ? `Kalender akan otomatis berganti bulan setiap ${autoSwitchMinutes} menit.`
+                                : 'Auto switch dinonaktifkan. Pergantian bulan hanya melalui klik manual.'}
+                        </p>
+
+                        <div className="pt-2">
+                            <button
+                                onClick={handleSaveAutoSwitch}
+                                disabled={isSavingAutoSwitch}
+                                className="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingAutoSwitch ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <span>Menyimpan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Simpan</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* Calendar Font Settings */}
             <div className="card p-6">
                 <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">Font Kalender</h2>
@@ -1027,7 +1709,36 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                                 {HEADING_FONTS.map(f => (
                                     <option key={f} value={f}>{f}</option>
                                 ))}
+                                {customFonts.length > 0 && <option disabled>── Custom Fonts ──</option>}
+                                {customFonts.map(f => (
+                                    <option key={`custom-${f.name}`} value={f.name}>{f.name} (Custom)</option>
+                                ))}
                             </select>
+                        </div>
+
+                        {/* Heading font upload */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0"></label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={fontFileInputRef}
+                                    type="file"
+                                    accept=".woff,.woff2,.ttf,.otf"
+                                    className="hidden"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleUploadFont(file, 'heading');
+                                        e.target.value = '';
+                                    }}
+                                />
+                                <button
+                                    onClick={() => fontFileInputRef.current?.click()}
+                                    disabled={isUploadingFont}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50"
+                                >
+                                    {isUploadingFont ? 'Uploading...' : '📁 Upload Font Heading'}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Body font */}
@@ -1042,7 +1753,36 @@ const SiteSettingsView: React.FC<SiteSettingsViewProps> = ({ userRole }) => {
                                 {BODY_FONTS.map(f => (
                                     <option key={f} value={f}>{f}</option>
                                 ))}
+                                {customFonts.length > 0 && <option disabled>── Custom Fonts ──</option>}
+                                {customFonts.map(f => (
+                                    <option key={`custom-${f.name}`} value={f.name}>{f.name} (Custom)</option>
+                                ))}
                             </select>
+                        </div>
+
+                        {/* Body font upload */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <label className="text-sm font-medium text-[var(--color-text-primary)] w-28 shrink-0"></label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={fontFileInputBodyRef}
+                                    type="file"
+                                    accept=".woff,.woff2,.ttf,.otf"
+                                    className="hidden"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleUploadFont(file, 'body');
+                                        e.target.value = '';
+                                    }}
+                                />
+                                <button
+                                    onClick={() => fontFileInputBodyRef.current?.click()}
+                                    disabled={isUploadingFont}
+                                    className="text-xs px-3 py-1.5 rounded-lg border border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50"
+                                >
+                                    {isUploadingFont ? 'Uploading...' : '📁 Upload Font Body'}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Font preview */}
