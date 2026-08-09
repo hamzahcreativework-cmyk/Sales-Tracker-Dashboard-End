@@ -1362,6 +1362,7 @@ const CricketBoardCalendar: React.FC = () => {
     const [bgMusicUrls, setBgMusicUrls] = useState<string[]>([]);
     const [viewMode, setViewMode] = useState<ViewMode>('compact');
     const [compactDate, setCompactDate] = useState(dateUtils.getTodayString());
+    const [calendarDate, setCalendarDate] = useState(dateUtils.getTodayString());
     const [calendarDateRange, setCalendarDateRange] = useState<{
         startMonth: number; startYear: number; endMonth: number; endYear: number;
     } | null>(null);
@@ -1932,7 +1933,13 @@ const CricketBoardCalendar: React.FC = () => {
     return (
         <div style={{
             ...S.bg,
-            minHeight: '100vh',
+            width: 1920,
+            height: 1080,
+            maxWidth: '100vw',
+            maxHeight: '100vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column' as const,
             ...S.poppins,
             position: 'relative',
             '--font-heading': `'${headingFont}', monospace`,
@@ -2036,10 +2043,11 @@ const CricketBoardCalendar: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    flexWrap: 'wrap',
+                    flexWrap: 'nowrap',
                     gap: 12,
                     position: 'relative',
                     zIndex: 1,
+                    flexShrink: 0,
                 }}
             >
                 {/* Logo */}
@@ -2131,12 +2139,13 @@ const CricketBoardCalendar: React.FC = () => {
 
             {/* ── COMPACT VIEW ──────────────────────────────────────── */}
             {viewMode === 'compact' && (<>
-                <div key={`compact-${currentMonth}-${currentYear}`} style={{ padding: '10px 20px 80px 20px', margin: '0 auto', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
+                <div key={`compact-${currentMonth}-${currentYear}`} style={{ padding: '10px 20px 0 20px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', width: '100%', boxSizing: 'border-box' as const }}>
                     {/* Month navigation for compact mode */}
                     <motion.div
                         initial={{ opacity: 0, y: 25 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.1, ease: 'easeOut' }}
+                        style={{ flexShrink: 0 }}
                     >
                         <div style={{
                             display: 'flex',
@@ -2167,75 +2176,81 @@ const CricketBoardCalendar: React.FC = () => {
                     </motion.div>
 
                     {/* 3 columns: Tanggal Cantik | Video (landscape) | Venue Availability */}
-                    <div className="compact-grid" style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 2fr 1fr',
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'row' as const,
                         gap: 12,
-                        alignItems: 'stretch',
                         flex: 1,
                         minHeight: 0,
                     }}>
-                        <TanggalCantik
-                            year={currentYear}
-                            month={currentMonth}
-                            deals={deals}
-                            onSelectDate={(dateStr) => setCompactDate(dateStr)}
-                            baseDelay={0.25}
-                        />
+                        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                            <TanggalCantik
+                                year={currentYear}
+                                month={currentMonth}
+                                deals={deals}
+                                onSelectDate={(dateStr) => setCompactDate(dateStr)}
+                                baseDelay={0.25}
+                            />
+                        </div>
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.45, ease: 'easeOut' }}
-                            style={{ height: '100%' }}
+                            style={{ flex: 2, minWidth: 0, minHeight: 0 }}
                         >
                             <VideoPanel videoUrls={bgVideoUrls} enabled={videoEnabled} placeholderText={videoPlaceholderText} />
                         </motion.div>
-                        <VenueAvailability
-                            deals={deals}
-                            selectedDate={compactDate}
-                            onDateChange={(dateStr) => setCompactDate(dateStr)}
-                            onToday={() => setCompactDate(dateUtils.getTodayString())}
-                            venueNames={allVenueNames}
-                            baseDelay={0.65}
-                            compact
-                        />
-                    </div>
-                </div>
-                {marqueeTexts.length > 0 && (
-                    <div
-                        className="billboard-marquee"
-                        style={{
-                            borderRadius: 10,
-                            padding: '14px 0',
-                            marginTop: 12,
-                            overflow: 'hidden',
-                            position: 'relative',
-                        }}
-                    >
-                        <div style={{
-                            display: 'inline-flex',
-                            whiteSpace: 'nowrap',
-                            animation: 'marquee 60s linear infinite',
-                        }}>
-                            {[0, 1].map(copy => (
-                                <span key={copy} style={{
-                                    ...S.orbitron,
-                                    fontSize: 22,
-                                    fontWeight: 700,
-                                    letterSpacing: '0.05em',
-                                    paddingRight: 60,
-                                }}>
-                                    {marqueeTexts.map((text, i) => (
-                                        <React.Fragment key={i}>
-                                            {i > 0 && <span className="marquee-separator" style={{ margin: '0 24px', opacity: 0.5 }}>{' ✦ '}</span>}
-                                            <span className="marquee-text-shimmer">{text}</span>
-                                        </React.Fragment>
-                                    ))}
-                                </span>
-                            ))}
+                        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                            <VenueAvailability
+                                deals={deals}
+                                selectedDate={compactDate}
+                                onDateChange={(dateStr) => setCompactDate(dateStr)}
+                                onToday={() => setCompactDate(dateUtils.getTodayString())}
+                                venueNames={allVenueNames}
+                                baseDelay={0.65}
+                                compact
+                            />
                         </div>
                     </div>
-                )}
+
+                    {/* Marquee — inside the viewport container so no scroll needed */}
+                    {marqueeTexts.length > 0 && (
+                        <div
+                            className="billboard-marquee"
+                            style={{
+                                flexShrink: 0,
+                                borderRadius: 10,
+                                padding: '14px 0',
+                                marginTop: 12,
+                                overflow: 'hidden',
+                                position: 'relative',
+                            }}
+                        >
+                            <div style={{
+                                display: 'inline-flex',
+                                whiteSpace: 'nowrap',
+                                animation: 'marquee 60s linear infinite',
+                            }}>
+                                {[0, 1].map(copy => (
+                                    <span key={copy} style={{
+                                        ...S.orbitron,
+                                        fontSize: 22,
+                                        fontWeight: 700,
+                                        letterSpacing: '0.05em',
+                                        paddingRight: 60,
+                                    }}>
+                                        {marqueeTexts.map((text, i) => (
+                                            <React.Fragment key={i}>
+                                                {i > 0 && <span className="marquee-separator" style={{ margin: '0 24px', opacity: 0.5 }}>{' ✦ '}</span>}
+                                                <span className="marquee-text-shimmer">{text}</span>
+                                            </React.Fragment>
+                                        ))}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </>)}
 
             {/* ── CALENDAR VIEW ────────────────────────────────────────── */}
@@ -2244,14 +2259,8 @@ const CricketBoardCalendar: React.FC = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-                style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1 }}
+                style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1, flex: 1, overflow: 'auto', width: '100%' }}
             >
-
-                {/* ── EVENT CHART ──────────────────────────────────────── */}
-                <EventChart
-                    monthDeals={monthDeals}
-                    monthLabel={`${INDONESIAN_MONTHS[currentMonth].toUpperCase()} ${currentYear}`}
-                />
 
                 {/* ── VENUE LEGEND ─────────────────────────────────────── */}
                 {venueEntries.length > 0 && (
@@ -2432,6 +2441,31 @@ const CricketBoardCalendar: React.FC = () => {
                     </div>
                 )}
 
+                {/* ── TANGGAL CANTIK & VENUE AVAILABILITY ─────────────── */}
+                <div className="calendar-bottom-grid" style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 14,
+                    marginTop: 14,
+                    maxHeight: 500,
+                }}>
+                    <TanggalCantik
+                        year={currentYear}
+                        month={currentMonth}
+                        deals={deals}
+                        onSelectDate={(dateStr) => setCalendarDate(dateStr)}
+                        baseDelay={0.3}
+                    />
+                    <VenueAvailability
+                        deals={deals}
+                        selectedDate={calendarDate}
+                        onDateChange={(dateStr) => setCalendarDate(dateStr)}
+                        onToday={() => setCalendarDate(dateUtils.getTodayString())}
+                        venueNames={allVenueNames}
+                        baseDelay={0.45}
+                    />
+                </div>
+
             </motion.div>
             )}
 
@@ -2471,13 +2505,9 @@ const CricketBoardCalendar: React.FC = () => {
                 ::-webkit-scrollbar-thumb { background: ${S.border.replace('1px solid ', '')}; border-radius: 3px; }
                 ::-webkit-scrollbar-thumb:hover { background: #FFD700; }
 
-                @media (max-width: 1200px) {
-                    .compact-grid { grid-template-columns: 1fr !important; }
-                    .event-chart-grid { grid-template-columns: 1fr !important; }
-                }
                 @media (max-width: 768px) {
+                    .calendar-bottom-grid { grid-template-columns: 1fr !important; }
                     .cricket-stats-panel { flex-wrap: wrap !important; }
-                    .event-chart-grid { grid-template-columns: 1fr !important; }
                 }
             `}</style>
         </div>
