@@ -468,15 +468,32 @@ interface TanggalCantikProps {
     onSelectDate: (dateStr: string) => void;
     baseDelay?: number;
 }
+const ITEMS_PER_PAGE = 4;
+
 const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSelectDate, baseDelay = 0 }) => {
     const cantikDates = generateTanggalCantik(year, month);
     const mm = String(month + 1).padStart(2, '0');
+    const [pageIndex, setPageIndex] = useState(0);
+
+    const totalPages = Math.max(1, Math.ceil(cantikDates.length / ITEMS_PER_PAGE));
 
     const dealsByDate = deals.reduce<Record<string, DealingEntry[]>>((acc, d) => {
         if (!acc[d.tanggalAcara]) acc[d.tanggalAcara] = [];
         acc[d.tanggalAcara].push(d);
         return acc;
     }, {});
+
+    useEffect(() => {
+        if (totalPages <= 1) return;
+        const timer = setInterval(() => {
+            setPageIndex(prev => (prev + 1) % totalPages);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [totalPages]);
+
+    useEffect(() => { setPageIndex(0); }, [year, month]);
+
+    const pageItems = cantikDates.slice(pageIndex * ITEMS_PER_PAGE, (pageIndex + 1) * ITEMS_PER_PAGE);
 
     return (
         <motion.div
@@ -507,84 +524,109 @@ const TanggalCantik: React.FC<TanggalCantikProps> = ({ year, month, deals, onSel
                     </span>
                 </div>
                 <span style={{ ...S.poppins, color: '#9CA3AF', fontSize: 10 }}>
-                    {INDONESIAN_MONTHS[month]} {year}
+                    {totalPages > 1 ? `${pageIndex + 1} / ${totalPages}` : ''} {INDONESIAN_MONTHS[month]} {year}
                 </span>
             </div>
 
-            {/* Date list */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+            {/* Auto-cycling 4-item pages */}
+            <div style={{ flex: 1, padding: 12, position: 'relative', overflow: 'hidden' }}>
                 {cantikDates.length === 0 ? (
                     <div style={{ ...S.poppins, color: S.muted, fontSize: 12, textAlign: 'center', padding: 24 }}>
                         Tidak ada tanggal cantik bulan ini
                     </div>
                 ) : (
-                    cantikDates.map((cd, i) => {
-                        const dateStr = `${year}-${mm}-${String(cd.day).padStart(2, '0')}`;
-                        const dayDeals = dealsByDate[dateStr] ?? [];
-                        const dateObj = new Date(year, month, cd.day);
-                        const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][dateObj.getDay()];
-                        const isBooked = dayDeals.length > 0;
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={pageIndex}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                        >
+                            {pageItems.map((cd) => {
+                                const dateStr = `${year}-${mm}-${String(cd.day).padStart(2, '0')}`;
+                                const dayDeals = dealsByDate[dateStr] ?? [];
+                                const dateObj = new Date(year, month, cd.day);
+                                const dayName = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][dateObj.getDay()];
+                                const isBooked = dayDeals.length > 0;
 
-                        return (
-                            <motion.div
-                                key={cd.day}
-                                initial={{ opacity: 0, y: 18 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, delay: baseDelay + 0.06 * i, ease: 'easeOut' }}
-                            >
-                            <div
-                                className="billboard-card"
-                                onClick={() => onSelectDate(dateStr)}
-                                style={{
-                                    borderRadius: 10,
-                                    padding: '10px 12px',
-                                    marginBottom: 8,
-                                    cursor: 'pointer',
-                                    borderLeft: `3px solid ${S.gold}`,
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                        {/* Day number */}
-                                        <div style={{
-                                            ...S.orbitron,
-                                            color: S.gold,
-                                            fontSize: 24,
-                                            fontWeight: 900,
-                                            lineHeight: 1,
-                                            minWidth: 36,
-                                            textAlign: 'center',
-                                            textShadow: `0 0 12px ${S.gold}66, 0 0 24px ${S.gold}22`,
-                                        }}>
-                                            {String(cd.day).padStart(2, '0')}
-                                        </div>
-                                        <div>
-                                            <div style={{ ...S.poppins, color: S.white, fontSize: 11, fontWeight: 600 }}>
-                                                {dayName}, {cd.day} {INDONESIAN_MONTHS[month]}
+                                return (
+                                    <div
+                                        key={cd.day}
+                                        className="billboard-card"
+                                        onClick={() => onSelectDate(dateStr)}
+                                        style={{
+                                            borderRadius: 10,
+                                            padding: '10px 12px',
+                                            cursor: 'pointer',
+                                            borderLeft: `3px solid ${S.gold}`,
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <div style={{
+                                                    ...S.orbitron,
+                                                    color: S.gold,
+                                                    fontSize: 24,
+                                                    fontWeight: 900,
+                                                    lineHeight: 1,
+                                                    minWidth: 36,
+                                                    textAlign: 'center',
+                                                    textShadow: `0 0 12px ${S.gold}66, 0 0 24px ${S.gold}22`,
+                                                }}>
+                                                    {String(cd.day).padStart(2, '0')}
+                                                </div>
+                                                <div>
+                                                    <div style={{ ...S.poppins, color: S.white, fontSize: 11, fontWeight: 600 }}>
+                                                        {dayName}, {cd.day} {INDONESIAN_MONTHS[month]}
+                                                    </div>
+                                                    <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 9, marginTop: 1 }}>
+                                                        {cd.label}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                ...S.orbitron,
+                                                fontSize: 8,
+                                                fontWeight: 700,
+                                                padding: '2px 6px',
+                                                borderRadius: 10,
+                                                backgroundColor: isBooked ? '#F59E0B22' : '#10B98122',
+                                                color: isBooked ? '#F59E0B' : '#10B981',
+                                                border: `1px solid ${isBooked ? '#F59E0B44' : '#10B98144'}`,
+                                                letterSpacing: '0.05em',
+                                            }}>
+                                                {isBooked ? `${dayDeals.length} EVENT` : 'KOSONG'}
                                             </div>
                                         </div>
                                     </div>
-                                    {/* Booking count badge */}
-                                    <div style={{
-                                        ...S.orbitron,
-                                        fontSize: 9,
-                                        fontWeight: 700,
-                                        padding: '3px 8px',
-                                        borderRadius: 10,
-                                        backgroundColor: isBooked ? '#F59E0B22' : '#10B98122',
-                                        color: isBooked ? '#F59E0B' : '#10B981',
-                                        border: `1px solid ${isBooked ? '#F59E0B44' : '#10B98144'}`,
-                                        letterSpacing: '0.05em',
-                                    }}>
-                                        {isBooked ? `${dayDeals.length} EVENT` : 'KOSONG'}
-                                    </div>
-                                </div>
-                            </div>
-                            </motion.div>
-                        );
-                    })
+                                );
+                            })}
+                        </motion.div>
+                    </AnimatePresence>
                 )}
             </div>
+
+            {/* Progress dots */}
+            {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, padding: '8px 0', flexShrink: 0 }}>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                        <div
+                            key={i}
+                            onClick={() => setPageIndex(i)}
+                            style={{
+                                width: i === pageIndex ? 16 : 6,
+                                height: 6,
+                                borderRadius: 3,
+                                backgroundColor: i === pageIndex ? S.gold : `${S.gold}44`,
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -751,6 +793,7 @@ interface VenueAvailabilityProps {
 }
 const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDate, onDateChange, onToday, venueNames, baseDelay = 0, compact = false }) => {
     const selectedDeals = deals.filter(d => d.tanggalAcara === selectedDate);
+    const [pageIndex, setPageIndex] = useState(0);
 
     const venueMap: Record<string, { pagi: DealingEntry | null; malam: DealingEntry | null; fullDay: DealingEntry | null; others: DealingEntry[] }> = {};
     const dealVenues = deals.map(d => d.namaVenue);
@@ -768,12 +811,25 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
         else venueMap[d.namaVenue].others.push(d);
     });
 
-    // Parse selected date for display
     const [sy, sm, sd] = selectedDate.split('-').map(Number);
     const selDateObj = new Date(sy, sm - 1, sd);
     const dayName = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][selDateObj.getDay()];
     const todayStr = dateUtils.getTodayString();
     const isToday = selectedDate === todayStr;
+
+    const totalPages = Math.max(1, Math.ceil(allVenues.length / ITEMS_PER_PAGE));
+
+    useEffect(() => {
+        if (totalPages <= 1) return;
+        const timer = setInterval(() => {
+            setPageIndex(prev => (prev + 1) % totalPages);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [totalPages]);
+
+    useEffect(() => { setPageIndex(0); }, [selectedDate]);
+
+    const pageVenues = allVenues.slice(pageIndex * ITEMS_PER_PAGE, (pageIndex + 1) * ITEMS_PER_PAGE);
 
     const todayBtnStyle: React.CSSProperties = {
         ...S.orbitron,
@@ -816,10 +872,12 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                         VENUE AVAILABILITY
                     </span>
                 </div>
+                <span style={{ ...S.poppins, color: '#9CA3AF', fontSize: 10 }}>
+                    {totalPages > 1 ? `${pageIndex + 1} / ${totalPages}` : ''}
+                </span>
             </div>
 
-            {/* Date picker */}
-            {!compact && (
+            {/* Date display */}
             <div style={{
                 ...S.surface,
                 borderBottom: S.border,
@@ -828,31 +886,38 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 8,
+                flexShrink: 0,
             }}>
-                <div style={{ flex: 1 }}>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={e => onDateChange(e.target.value)}
-                        style={{
-                            ...S.orbitron,
-                            backgroundColor: S.surfaceRaw,
-                            border: S.border,
-                            color: S.gold,
-                            borderRadius: 6,
-                            padding: '4px 8px',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            width: '100%',
-                            cursor: 'pointer',
-                            outline: 'none',
-                            colorScheme: 'dark',
-                        }}
-                    />
-                    <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 9, marginTop: 3 }}>
-                        {dayName}{isToday ? ' · Hari Ini' : ''}
+                {!compact ? (
+                    <div style={{ flex: 1 }}>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={e => onDateChange(e.target.value)}
+                            style={{
+                                ...S.orbitron,
+                                backgroundColor: S.surfaceRaw,
+                                border: S.border,
+                                color: S.gold,
+                                borderRadius: 6,
+                                padding: '4px 8px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                width: '100%',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                colorScheme: 'dark',
+                            }}
+                        />
+                        <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 9, marginTop: 3 }}>
+                            {dayName}{isToday ? ' · Hari Ini' : ''}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div style={{ ...S.poppins, color: '#9CA3AF', fontSize: 10 }}>
+                        {dayName}{isToday ? ' · Hari Ini' : ''} — {sd} {INDONESIAN_MONTHS[sm - 1]}
+                    </div>
+                )}
                 {!isToday && (
                     <button
                         style={todayBtnStyle}
@@ -862,129 +927,150 @@ const VenueAvailability: React.FC<VenueAvailabilityProps> = ({ deals, selectedDa
                     >TODAY</button>
                 )}
             </div>
-            )}
 
-            {/* Venue list */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+            {/* Auto-cycling 4-venue pages */}
+            <div style={{ flex: 1, padding: 12, position: 'relative', overflow: 'hidden' }}>
                 {allVenues.length === 0 ? (
                     <div style={{ ...S.poppins, color: S.muted, fontSize: 12, textAlign: 'center', padding: 24 }}>
                         Memuat data venue...
                     </div>
                 ) : (
-                    allVenues.map((venue, i) => {
-                        const info = venueMap[venue];
-                        const color = getVenueColor(venue);
-                        const hasFullDay = !!info.fullDay;
-                        const hasPagi = !!info.pagi;
-                        const hasMalam = !!info.malam;
-                        const hasOthers = info.others.length > 0;
-                        const isBooked = hasFullDay || hasPagi || hasMalam || hasOthers;
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={pageIndex}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                        >
+                            {pageVenues.map((venue) => {
+                                const info = venueMap[venue];
+                                const color = getVenueColor(venue);
+                                const hasFullDay = !!info.fullDay;
+                                const hasPagi = !!info.pagi;
+                                const hasMalam = !!info.malam;
+                                const hasOthers = info.others.length > 0;
+                                const isBooked = hasFullDay || hasPagi || hasMalam || hasOthers;
 
-                        const slots: { label: string; icon: string; deal: DealingEntry | null; available: boolean }[] = hasFullDay
-                            ? [{ label: 'Full Day', icon: '☀️', deal: info.fullDay, available: false }]
-                            : [
-                                { label: 'Pagi', icon: '🌅', deal: info.pagi, available: !info.pagi },
-                                { label: 'Malam', icon: '🌙', deal: info.malam, available: !info.malam },
-                            ];
+                                const slots: { label: string; icon: string; deal: DealingEntry | null; available: boolean }[] = hasFullDay
+                                    ? [{ label: 'Full Day', icon: '☀️', deal: info.fullDay, available: false }]
+                                    : [
+                                        { label: 'Pagi', icon: '🌅', deal: info.pagi, available: !info.pagi },
+                                        { label: 'Malam', icon: '🌙', deal: info.malam, available: !info.malam },
+                                    ];
 
-                        return (
-                            <motion.div
-                                key={venue}
-                                initial={{ opacity: 0, y: 18 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, delay: baseDelay + 0.06 * i, ease: 'easeOut' }}
-                            >
-                            <div
-                                className="billboard-card"
-                                style={{
-                                    borderLeft: `3px solid ${color}`,
-                                    borderRadius: 8,
-                                    padding: '10px 12px',
-                                    marginBottom: 8,
-                                }}
-                            >
-                                {/* Venue name */}
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginBottom: 6,
-                                }}>
-                                    <span style={{ ...S.poppins, color: S.white, fontSize: 12, fontWeight: 600 }}>
-                                        {venue}
-                                    </span>
-                                    {!isBooked && (
-                                        <span style={{
-                                            ...S.orbitron,
-                                            fontSize: 8,
-                                            fontWeight: 700,
-                                            color: '#10B981',
-                                            backgroundColor: '#10B98122',
-                                            border: '1px solid #10B98144',
-                                            borderRadius: 10,
-                                            padding: '2px 8px',
-                                            letterSpacing: '0.05em',
+                                return (
+                                    <div
+                                        key={venue}
+                                        className="billboard-card"
+                                        style={{
+                                            borderLeft: `3px solid ${color}`,
+                                            borderRadius: 8,
+                                            padding: '10px 12px',
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            marginBottom: 6,
                                         }}>
-                                            AVAILABLE
-                                        </span>
-                                    )}
-                                </div>
-                                {/* Time slots */}
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                    {slots.map(slot => {
-                                        const statusColor = slot.available ? '#10B981' : BOOKING_STATUS_COLORS[slot.deal?.jenisBooking ?? ''] ?? '#6B7280';
-                                        return (
-                                            <div
-                                                key={slot.label}
-                                                style={{
-                                                    ...S.poppins,
-                                                    fontSize: 10,
-                                                    padding: '3px 8px',
-                                                    borderRadius: 6,
-                                                    backgroundColor: slot.available ? '#10B98115' : `${statusColor}15`,
-                                                    border: `1px solid ${slot.available ? '#10B98133' : `${statusColor}33`}`,
-                                                    color: slot.available ? '#10B981' : statusColor,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                }}
-                                            >
-                                                <span style={{ fontSize: 10 }}>{slot.icon}</span>
-                                                <span>{slot.label}</span>
-                                                {slot.deal && (
-                                                    <span style={{ fontWeight: 600, marginLeft: 2 }}>
-                                                        — {slot.deal.namaClient}
-                                                    </span>
-                                                )}
-                                                {slot.available && (
-                                                    <span style={{ fontWeight: 600, marginLeft: 2 }}>— Kosong</span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                    {info.others.map(d => (
-                                        <div
-                                            key={d.id}
-                                            style={{
-                                                ...S.poppins,
-                                                fontSize: 10,
-                                                padding: '3px 8px',
-                                                borderRadius: 6,
-                                                backgroundColor: `${BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280'}15`,
-                                                border: `1px solid ${BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280'}33`,
-                                                color: BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280',
-                                            }}
-                                        >
-                                            {d.namaClient} — {d.jenisBooking}
+                                            <span style={{ ...S.poppins, color: S.white, fontSize: 12, fontWeight: 600 }}>
+                                                {venue}
+                                            </span>
+                                            {!isBooked && (
+                                                <span style={{
+                                                    ...S.orbitron,
+                                                    fontSize: 8,
+                                                    fontWeight: 700,
+                                                    color: '#10B981',
+                                                    backgroundColor: '#10B98122',
+                                                    border: '1px solid #10B98144',
+                                                    borderRadius: 10,
+                                                    padding: '2px 8px',
+                                                    letterSpacing: '0.05em',
+                                                }}>
+                                                    AVAILABLE
+                                                </span>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                            </motion.div>
-                        );
-                    })
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                            {slots.map(slot => {
+                                                const statusColor = slot.available ? '#10B981' : BOOKING_STATUS_COLORS[slot.deal?.jenisBooking ?? ''] ?? '#6B7280';
+                                                return (
+                                                    <div
+                                                        key={slot.label}
+                                                        style={{
+                                                            ...S.poppins,
+                                                            fontSize: 10,
+                                                            padding: '3px 8px',
+                                                            borderRadius: 6,
+                                                            backgroundColor: slot.available ? '#10B98115' : `${statusColor}15`,
+                                                            border: `1px solid ${slot.available ? '#10B98133' : `${statusColor}33`}`,
+                                                            color: slot.available ? '#10B981' : statusColor,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 4,
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: 10 }}>{slot.icon}</span>
+                                                        <span>{slot.label}</span>
+                                                        {slot.deal && (
+                                                            <span style={{ fontWeight: 600, marginLeft: 2 }}>
+                                                                — {slot.deal.namaClient}
+                                                            </span>
+                                                        )}
+                                                        {slot.available && (
+                                                            <span style={{ fontWeight: 600, marginLeft: 2 }}>— Kosong</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {info.others.map(d => (
+                                                <div
+                                                    key={d.id}
+                                                    style={{
+                                                        ...S.poppins,
+                                                        fontSize: 10,
+                                                        padding: '3px 8px',
+                                                        borderRadius: 6,
+                                                        backgroundColor: `${BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280'}15`,
+                                                        border: `1px solid ${BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280'}33`,
+                                                        color: BOOKING_STATUS_COLORS[d.jenisBooking] ?? '#6B7280',
+                                                    }}
+                                                >
+                                                    {d.namaClient} — {d.jenisBooking}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </motion.div>
+                    </AnimatePresence>
                 )}
             </div>
+
+            {/* Progress dots */}
+            {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, padding: '8px 0', flexShrink: 0 }}>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                        <div
+                            key={i}
+                            onClick={() => setPageIndex(i)}
+                            style={{
+                                width: i === pageIndex ? 16 : 6,
+                                height: 6,
+                                borderRadius: 3,
+                                backgroundColor: i === pageIndex ? S.gold : `${S.gold}44`,
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -2259,45 +2345,16 @@ const CricketBoardCalendar: React.FC = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-                style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1, flex: 1, overflow: 'auto', width: '100%' }}
+                style={{ padding: '10px 20px 0 20px', position: 'relative', zIndex: 1, flex: 1, overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column' as const, boxSizing: 'border-box' as const }}
             >
-
-                {/* ── VENUE LEGEND ─────────────────────────────────────── */}
-                {venueEntries.length > 0 && (
-                    <div style={{
-                        ...S.surface,
-                        border: S.border,
-                        borderRadius: 8,
-                        padding: '10px 16px',
-                        marginBottom: 14,
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 10,
-                        alignItems: 'center',
-                    }}>
-                        <span style={{ ...S.orbitron, color: S.gold, fontSize: 10, letterSpacing: '0.08em', marginRight: 4 }}>VENUES:</span>
-                        {venueEntries.map(([venue, count]) => (
-                            <div key={venue} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{
-                                    display: 'inline-block',
-                                    width: 10, height: 10, borderRadius: '50%',
-                                    backgroundColor: getVenueColor(venue),
-                                    flexShrink: 0,
-                                }} />
-                                <span style={{ ...S.poppins, color: S.white, fontSize: 11 }}>{venue}</span>
-                                <span style={{ ...S.orbitron, color: '#9CA3AF', fontSize: 10 }}>({count})</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
 
                 {/* ── MONTH NAVIGATION ─────────────────────────────────── */}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: 12,
-                    flexWrap: 'wrap',
+                    marginBottom: 8,
+                    flexShrink: 0,
                     gap: 8,
                 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -2332,139 +2389,213 @@ const CricketBoardCalendar: React.FC = () => {
                     </button>
                 </div>
 
-                {/* ── CALENDAR GRID ─────────────────────────────────────── */}
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: 60 }}>
-                        <div style={{ ...S.orbitron, color: S.gold, fontSize: 18, textShadow: S.glow }}>LOADING...</div>
+                {/* ── 3 COLUMNS: Tanggal Cantik | Calendar Grid | Venue Availability ── */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'row' as const,
+                    gap: 12,
+                    flex: 1,
+                    minHeight: 0,
+                }}>
+                    {/* Left: Tanggal Cantik */}
+                    <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                        <TanggalCantik
+                            year={currentYear}
+                            month={currentMonth}
+                            deals={deals}
+                            onSelectDate={(dateStr) => setCalendarDate(dateStr)}
+                            baseDelay={0.25}
+                        />
                     </div>
-                ) : (
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(7, 1fr)',
-                        gap: 4,
-                        border: S.border,
-                        borderRadius: 10,
-                        overflow: 'hidden',
-                        ...S.panel,
-                    }}>
-                        {/* Day headers */}
-                        {INDONESIAN_DAYS.map(day => (
-                            <div key={day} style={{
+
+                    {/* Center: Calendar Grid */}
+                    <div style={{ flex: 3, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' as const, overflow: 'auto' }}>
+                        {/* Venue Legend */}
+                        {venueEntries.length > 0 && (
+                            <div style={{
                                 ...S.surface,
-                                borderBottom: S.border,
-                                padding: '8px 4px',
-                                textAlign: 'center',
-                                ...S.orbitron,
-                                color: S.gold,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                letterSpacing: '0.06em',
+                                border: S.border,
+                                borderRadius: 8,
+                                padding: '6px 12px',
+                                marginBottom: 8,
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 8,
+                                alignItems: 'center',
+                                flexShrink: 0,
                             }}>
-                                {day}
-                            </div>
-                        ))}
-
-                        {/* Day cells */}
-                        {cells.map((cell, idx) => {
-                            const dayDeals = dealsByDate[cell.dateStr] ?? [];
-                            const visible  = dayDeals.slice(0, 3);
-                            const overflow = dayDeals.length - visible.length;
-                            const isToday  = cell.isToday;
-                            const compact  = true; // always compact in cell
-
-                            return (
-                                <div
-                                    key={idx}
-                                    style={{
-                                        ...S.panel,
-                                        border: isToday
-                                            ? `2px solid ${S.gold}`
-                                            : `1px solid ${S.border.replace('1px solid ', '')}44`,
-                                        borderRadius: 0,
-                                        minHeight: 110,
-                                        padding: 4,
-                                        position: 'relative',
-                                        boxShadow: isToday ? `inset 0 0 12px rgba(255,215,0,0.12)` : 'none',
-                                        transition: 'background-color 0.15s',
-                                    }}
-                                    onMouseEnter={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.surface.backgroundColor as string; }}
-                                    onMouseLeave={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.panel.backgroundColor as string; }}
-                                >
-                                    {/* Date number */}
-                                    <div style={{
-                                        ...S.orbitron,
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        color: isToday ? S.gold : cell.isCurrentMonth ? S.white : S.muted,
-                                        textAlign: 'right',
-                                        textShadow: isToday ? S.glow : 'none',
-                                        marginBottom: 3,
-                                        paddingRight: 2,
-                                    }}>
-                                        {cell.day}
+                                <span style={{ ...S.orbitron, color: S.gold, fontSize: 9, letterSpacing: '0.08em', marginRight: 4 }}>VENUES:</span>
+                                {venueEntries.map(([venue, count]) => (
+                                    <div key={venue} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <span style={{
+                                            display: 'inline-block',
+                                            width: 8, height: 8, borderRadius: '50%',
+                                            backgroundColor: getVenueColor(venue),
+                                            flexShrink: 0,
+                                        }} />
+                                        <span style={{ ...S.poppins, color: S.white, fontSize: 10 }}>{venue}</span>
+                                        <span style={{ ...S.orbitron, color: '#9CA3AF', fontSize: 9 }}>({count})</span>
                                     </div>
+                                ))}
+                            </div>
+                        )}
 
-                                    {/* Event cards */}
-                                    {visible.map(deal => (
-                                        <EventCard
-                                            key={deal.id}
-                                            deal={deal}
-                                            compact={compact}
-                                            onClick={setSelectedDeal}
-                                        />
-                                    ))}
+                        {loading ? (
+                            <div style={{ textAlign: 'center', padding: 60 }}>
+                                <div style={{ ...S.orbitron, color: S.gold, fontSize: 18, textShadow: S.glow }}>LOADING...</div>
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(7, 1fr)',
+                                gap: 2,
+                                border: S.border,
+                                borderRadius: 10,
+                                overflow: 'hidden',
+                                ...S.panel,
+                            }}>
+                                {/* Day headers */}
+                                {INDONESIAN_DAYS.map(day => (
+                                    <div key={day} style={{
+                                        ...S.surface,
+                                        borderBottom: S.border,
+                                        padding: '4px 2px',
+                                        textAlign: 'center',
+                                        ...S.orbitron,
+                                        color: S.gold,
+                                        fontSize: 9,
+                                        fontWeight: 700,
+                                        letterSpacing: '0.06em',
+                                    }}>
+                                        {day}
+                                    </div>
+                                ))}
 
-                                    {/* Overflow button */}
-                                    {overflow > 0 && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setOverflowDay({ dateStr: cell.dateStr, deals: dayDeals }); }}
+                                {/* Day cells */}
+                                {cells.map((cell, idx) => {
+                                    const dayDeals = dealsByDate[cell.dateStr] ?? [];
+                                    const visible  = dayDeals.slice(0, 2);
+                                    const overflow = dayDeals.length - visible.length;
+                                    const isToday  = cell.isToday;
+                                    const compact  = true;
+
+                                    return (
+                                        <div
+                                            key={idx}
                                             style={{
-                                                ...S.poppins,
-                                                backgroundColor: `${S.border.replace('1px solid ', '')}88`,
-                                                border: S.border,
-                                                color: S.gold,
-                                                borderRadius: 4,
-                                                padding: '1px 5px',
-                                                fontSize: 9,
-                                                cursor: 'pointer',
-                                                width: '100%',
-                                                marginTop: 2,
-                                                fontWeight: 600,
+                                                ...S.panel,
+                                                border: isToday
+                                                    ? `2px solid ${S.gold}`
+                                                    : `1px solid ${S.border.replace('1px solid ', '')}44`,
+                                                borderRadius: 0,
+                                                minHeight: 64,
+                                                padding: 3,
+                                                position: 'relative',
+                                                boxShadow: isToday ? `inset 0 0 12px rgba(255,215,0,0.12)` : 'none',
+                                                transition: 'background-color 0.15s',
                                             }}
+                                            onMouseEnter={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.surface.backgroundColor as string; }}
+                                            onMouseLeave={e => { if (!isToday) e.currentTarget.style.backgroundColor = S.panel.backgroundColor as string; }}
                                         >
-                                            +{overflow} more
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                            <div style={{
+                                                ...S.orbitron,
+                                                fontSize: 10,
+                                                fontWeight: 700,
+                                                color: isToday ? S.gold : cell.isCurrentMonth ? S.white : S.muted,
+                                                textAlign: 'right',
+                                                textShadow: isToday ? S.glow : 'none',
+                                                marginBottom: 2,
+                                                paddingRight: 2,
+                                            }}>
+                                                {cell.day}
+                                            </div>
+
+                                            {visible.map(deal => (
+                                                <EventCard
+                                                    key={deal.id}
+                                                    deal={deal}
+                                                    compact={compact}
+                                                    onClick={setSelectedDeal}
+                                                />
+                                            ))}
+
+                                            {overflow > 0 && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setOverflowDay({ dateStr: cell.dateStr, deals: dayDeals }); }}
+                                                    style={{
+                                                        ...S.poppins,
+                                                        backgroundColor: `${S.border.replace('1px solid ', '')}88`,
+                                                        border: S.border,
+                                                        color: S.gold,
+                                                        borderRadius: 4,
+                                                        padding: '1px 5px',
+                                                        fontSize: 8,
+                                                        cursor: 'pointer',
+                                                        width: '100%',
+                                                        marginTop: 1,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    +{overflow} more
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Venue Availability */}
+                    <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                        <VenueAvailability
+                            deals={deals}
+                            selectedDate={calendarDate}
+                            onDateChange={(dateStr) => setCalendarDate(dateStr)}
+                            onToday={() => setCalendarDate(dateUtils.getTodayString())}
+                            venueNames={allVenueNames}
+                            baseDelay={0.45}
+                        />
+                    </div>
+                </div>
+
+                {/* Marquee */}
+                {marqueeTexts.length > 0 && (
+                    <div
+                        className="billboard-marquee"
+                        style={{
+                            flexShrink: 0,
+                            borderRadius: 10,
+                            padding: '14px 0',
+                            marginTop: 12,
+                            overflow: 'hidden',
+                            position: 'relative',
+                        }}
+                    >
+                        <div style={{
+                            display: 'inline-flex',
+                            whiteSpace: 'nowrap',
+                            animation: 'marquee 60s linear infinite',
+                        }}>
+                            {[0, 1].map(copy => (
+                                <span key={copy} style={{
+                                    ...S.orbitron,
+                                    fontSize: 22,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.05em',
+                                    paddingRight: 60,
+                                }}>
+                                    {marqueeTexts.map((text, i) => (
+                                        <React.Fragment key={i}>
+                                            {i > 0 && <span className="marquee-separator" style={{ margin: '0 24px', opacity: 0.5 }}>{' ✦ '}</span>}
+                                            <span className="marquee-text-shimmer">{text}</span>
+                                        </React.Fragment>
+                                    ))}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 )}
-
-                {/* ── TANGGAL CANTIK & VENUE AVAILABILITY ─────────────── */}
-                <div className="calendar-bottom-grid" style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 14,
-                    marginTop: 14,
-                    maxHeight: 500,
-                }}>
-                    <TanggalCantik
-                        year={currentYear}
-                        month={currentMonth}
-                        deals={deals}
-                        onSelectDate={(dateStr) => setCalendarDate(dateStr)}
-                        baseDelay={0.3}
-                    />
-                    <VenueAvailability
-                        deals={deals}
-                        selectedDate={calendarDate}
-                        onDateChange={(dateStr) => setCalendarDate(dateStr)}
-                        onToday={() => setCalendarDate(dateUtils.getTodayString())}
-                        venueNames={allVenueNames}
-                        baseDelay={0.45}
-                    />
-                </div>
 
             </motion.div>
             )}
@@ -2506,7 +2637,6 @@ const CricketBoardCalendar: React.FC = () => {
                 ::-webkit-scrollbar-thumb:hover { background: #FFD700; }
 
                 @media (max-width: 768px) {
-                    .calendar-bottom-grid { grid-template-columns: 1fr !important; }
                     .cricket-stats-panel { flex-wrap: wrap !important; }
                 }
             `}</style>
