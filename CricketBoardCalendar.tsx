@@ -2247,29 +2247,6 @@ const CricketBoardCalendar: React.FC = () => {
                 style={{ padding: '16px 20px', maxWidth: 1400, margin: '0 auto', position: 'relative', zIndex: 1 }}
             >
 
-                {/* ── STATS PANEL ───────────────────────────────────────── */}
-                <div style={{
-                    ...S.panel,
-                    border: S.border,
-                    borderRadius: 10,
-                    padding: '14px 16px',
-                    marginBottom: 14,
-                    transition: 'box-shadow 0.3s',
-                    boxShadow: flash ? `0 0 30px rgba(255,215,0,0.25)` : 'none',
-                }}>
-                    <div style={{ ...S.orbitron, color: S.gold, fontSize: 11, letterSpacing: '0.1em', marginBottom: 10, textShadow: S.glow }}>
-                        INNINGS SUMMARY — {INDONESIAN_MONTHS[currentMonth].toUpperCase()} {currentYear}
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <StatPanel label="Total Events" value={monthDeals.length} color={S.gold} flash={flash} index={0} />
-                        <StatPanel label="Soft Booking" value={countBy('Soft Booking')} color="#8B5CF6" flash={flash} index={1} />
-                        <StatPanel label="Booking"      value={countBy('Booking')}      color="#3B82F6" flash={flash} index={2} />
-                        <StatPanel label="DP"           value={countBy('DP')}           color="#F59E0B" flash={flash} index={3} />
-                        <StatPanel label="Lunas"        value={countBy('Lunas')}        color="#10B981" flash={flash} index={4} />
-                        <StatPanel label="Waiting List" value={countBy('Waiting List')} color="#6B7280" flash={flash} index={5} />
-                    </div>
-                </div>
-
                 {/* ── EVENT CHART ──────────────────────────────────────── */}
                 <EventChart
                     monthDeals={monthDeals}
