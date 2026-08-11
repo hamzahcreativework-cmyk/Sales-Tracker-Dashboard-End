@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CalendarEventEntry, UserRole, DealingEntry, EventStatus, BookingStatus } from './types';
-import { PlusIcon, GridIcon, ListIcon, CloseIcon } from './Icons';
+import { PlusIcon, GridIcon, ListIcon, CloseIcon, WarningIcon } from './Icons';
 import AddEventModal from './AddEventModal';
 import { supabase } from './supabaseClient';
 import CalendarGrid from './CalendarGrid';
@@ -304,6 +304,63 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             });
     }, [selectedVenuePopup, eventsForGrid, currentDate]);
 
+    const venueWeekendWarnings = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const weekends: { weekNum: number; saturday: Date; sunday: Date; satStr: string; sunStr: string | null }[] = [];
+        let weekNum = 0;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new Date(year, month, day);
+            if (d.getDay() === 6) {
+                weekNum++;
+                const sunDate = new Date(year, month, day + 1);
+                const sunInMonth = sunDate.getMonth() === month;
+                weekends.push({
+                    weekNum,
+                    saturday: d,
+                    sunday: sunDate,
+                    satStr: dateUtils.toLocalDateString(d),
+                    sunStr: sunInMonth ? dateUtils.toLocalDateString(sunDate) : null,
+                });
+            }
+        }
+
+        const monthEvents = eventsForGrid.filter(e => {
+            const ed = dateUtils.parseLocalDate(e.eventDate);
+            return ed.getMonth() === month && ed.getFullYear() === year;
+        });
+
+        const venueNames = VENUES.map(v => v.name);
+        const venueResults: {
+            venueName: string;
+            missing: { weekNum: number; saturday: Date; sunday: Date; satHasEvent: boolean; sunHasEvent: boolean }[];
+            totalWeekends: number;
+        }[] = [];
+
+        for (const venue of venueNames) {
+            const venueDates = new Set(
+                monthEvents.filter(e => e.venueName === venue).map(e => e.eventDate)
+            );
+            const missing = weekends
+                .map(w => ({
+                    weekNum: w.weekNum,
+                    saturday: w.saturday,
+                    sunday: w.sunday,
+                    satHasEvent: venueDates.has(w.satStr),
+                    sunHasEvent: w.sunStr ? venueDates.has(w.sunStr) : true,
+                }))
+                .filter(w => !w.satHasEvent || !w.sunHasEvent);
+
+            if (missing.length > 0) {
+                venueResults.push({ venueName: venue, missing, totalWeekends: weekends.length });
+            }
+        }
+
+        return { venues: venueResults, totalWeekends: weekends.length };
+    }, [eventsForGrid, currentDate, VENUES]);
+
     // Always hide DP and Lunas filters in Calendar Event view per request.
     const bookingStatuses = React.useMemo(() => {
         const base: (BookingStatus | '')[] = ['', 'DP', 'Lunas', 'Soft Booking', 'Booking', 'Waiting List'];
@@ -465,6 +522,96 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                 <h2 className="text-xl font-bold text-[var(--color-text-primary)] text-center mb-4">
                     {monthYearFormat.format(currentDate)}
                 </h2>
+
+                {(() => {
+                    const displayedWarnings = effectiveVenueName
+                        ? venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
+                        : venueWeekendWarnings.venues;
+                    if (displayedWarnings.length === 0) return null;
+                    const isAllVenues = !effectiveVenueName;
+                    const totalVenueCount = isAllVenues ? VENUES.length : 1;
+                    return (
+                        <div className="mb-4 p-4 rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600">
+                            <div className="flex items-start gap-3">
+                                <WarningIcon className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm mb-1">
+                                        {isAllVenues
+                                            ? 'Target Weekend Venue Belum Tercapai'
+                                            : `Target Weekend ${effectiveVenueName} Belum Tercapai`}
+                                    </h3>
+                                    <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
+                                        {isAllVenues
+                                            ? 'Setiap venue harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.'
+                                            : `${effectiveVenueName} harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.`}
+                                    </p>
+                                    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                                        {displayedWarnings.map(v => {
+                                            const venueColor = getVenueColor(v.venueName);
+                                            const achieved = v.totalWeekends - v.missing.length;
+                                            return (
+                                                <div key={v.venueName} className="border border-amber-300 dark:border-amber-600 rounded-lg p-3 bg-amber-100/50 dark:bg-amber-900/30">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }} />
+                                                            <span className="font-bold text-xs text-amber-900 dark:text-amber-200">{v.venueName}</span>
+                                                        </div>
+                                                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                                            v.missing.length <= 1
+                                                                ? 'bg-amber-200 text-amber-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {achieved}/{v.totalWeekends} tercapai
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        {v.missing.map(w => {
+                                                            const satFormatted = w.saturday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                                                            const sunFormatted = w.sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                                                            const missingParts: string[] = [];
+                                                            if (!w.satHasEvent) missingParts.push(`Sabtu ${satFormatted}`);
+                                                            if (!w.sunHasEvent) missingParts.push(`Minggu ${sunFormatted}`);
+                                                            return (
+                                                                <div key={w.weekNum} className="flex items-center gap-2 text-xs">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                                                                    <span className="text-amber-800 dark:text-amber-300">
+                                                                        <span className="font-semibold">Weekend {w.weekNum}:</span> Belum ada event di {missingParts.join(' & ')}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-amber-300 dark:border-amber-600 flex items-center gap-4 text-xs">
+                                        <span className="text-amber-800 dark:text-amber-300 font-semibold">
+                                            {isAllVenues
+                                                ? `Summary: ${displayedWarnings.length} dari ${totalVenueCount} venue belum mencapai target weekend`
+                                                : `Summary: ${venueWeekendWarnings.totalWeekends - displayedWarnings[0].missing.length}/${venueWeekendWarnings.totalWeekends} weekend tercapai`}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                                            isAllVenues
+                                                ? displayedWarnings.length <= 2
+                                                    ? 'bg-amber-200 text-amber-800'
+                                                    : displayedWarnings.length <= 5
+                                                    ? 'bg-orange-200 text-orange-800'
+                                                    : 'bg-red-100 text-red-800'
+                                                : displayedWarnings[0].missing.length <= 1
+                                                    ? 'bg-amber-200 text-amber-800'
+                                                    : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            {isAllVenues
+                                                ? `${totalVenueCount - displayedWarnings.length}/${totalVenueCount} venue OK`
+                                                : `${displayedWarnings[0].missing.length} weekend belum tercapai`}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {isLoading ? (
                     <div className="flex justify-center items-center h-96">
