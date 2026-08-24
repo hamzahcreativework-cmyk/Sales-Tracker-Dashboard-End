@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CalendarEventEntry, UserRole, DealingEntry, EventStatus, BookingStatus } from './types';
-import { PlusIcon, GridIcon, ListIcon, CloseIcon, WarningIcon } from './Icons';
+import { PlusIcon, GridIcon, ListIcon, CloseIcon, WarningIcon, PdfIcon } from './Icons';
 import AddEventModal from './AddEventModal';
 import { supabase } from './supabaseClient';
 import CalendarGrid from './CalendarGrid';
@@ -9,6 +9,8 @@ import { ActiveView } from './App';
 import { useVenues } from './VenueContext';
 import AgendaView from './AgendaView';
 import { dateUtils } from './dateUtils';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CalendarEventViewProps {
     userRole: UserRole;
@@ -361,6 +363,62 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         return { venues: venueResults, totalWeekends: weekends.length };
     }, [eventsForGrid, currentDate, VENUES]);
 
+    const handleExportWeekendWarningsPDF = () => {
+        const displayedWarnings = effectiveVenueName
+            ? venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
+            : venueWeekendWarnings.venues;
+
+        if (displayedWarnings.length === 0) {
+            alert('Tidak ada data target weekend yang belum tercapai.');
+            return;
+        }
+
+        const doc = new jsPDF();
+        const monthYear = new Intl.DateTimeFormat('id-ID', { year: 'numeric', month: 'long' }).format(currentDate);
+        const title = effectiveVenueName
+            ? `Target Weekend ${effectiveVenueName} Belum Tercapai`
+            : 'Target Weekend Venue Belum Tercapai';
+
+        doc.setFontSize(14);
+        doc.text(title, 14, 16);
+        doc.setFontSize(10);
+        doc.text(`Periode: ${monthYear}`, 14, 23);
+
+        const tableRows: (string | number)[][] = [];
+        displayedWarnings.forEach(v => {
+            v.missing.forEach(w => {
+                const missingParts: string[] = [];
+                if (!w.satHasEvent) missingParts.push(`Sabtu ${w.saturday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`);
+                if (!w.sunHasEvent) missingParts.push(`Minggu ${w.sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`);
+                tableRows.push([
+                    v.venueName,
+                    `Weekend ${w.weekNum}`,
+                    missingParts.join(' & '),
+                    `${v.totalWeekends - v.missing.length}/${v.totalWeekends}`,
+                ]);
+            });
+        });
+
+        autoTable(doc, {
+            head: [['Venue', 'Weekend', 'Belum Ada Event', 'Tercapai']],
+            body: tableRows,
+            startY: 28,
+            theme: 'grid',
+            styles: { fontSize: 9 },
+            headStyles: { fillColor: [217, 119, 6] },
+        });
+
+        const finalY = (doc as any).lastAutoTable?.finalY || 28 + tableRows.length * 10;
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        const summaryText = effectiveVenueName
+            ? `Summary: ${venueWeekendWarnings.totalWeekends - displayedWarnings[0].missing.length}/${venueWeekendWarnings.totalWeekends} weekend tercapai`
+            : `Summary: ${displayedWarnings.length} dari ${VENUES.length} venue belum mencapai target weekend`;
+        doc.text(summaryText, 14, finalY + 8);
+
+        doc.save(`target-weekend-belum-tercapai-${monthYear.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    };
+
     // Always hide DP and Lunas filters in Calendar Event view per request.
     const bookingStatuses = React.useMemo(() => {
         const base: (BookingStatus | '')[] = ['', 'DP', 'Lunas', 'Soft Booking', 'Booking', 'Waiting List'];
@@ -535,11 +593,20 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                             <div className="flex items-start gap-3">
                                 <WarningIcon className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm mb-1">
-                                        {isAllVenues
-                                            ? 'Target Weekend Venue Belum Tercapai'
-                                            : `Target Weekend ${effectiveVenueName} Belum Tercapai`}
-                                    </h3>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm">
+                                            {isAllVenues
+                                                ? 'Target Weekend Venue Belum Tercapai'
+                                                : `Target Weekend ${effectiveVenueName} Belum Tercapai`}
+                                        </h3>
+                                        <button
+                                            onClick={handleExportWeekendWarningsPDF}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-200/60 dark:bg-amber-800/40 border border-amber-400 dark:border-amber-600 rounded-lg hover:bg-amber-300/60 dark:hover:bg-amber-700/40 transition-colors"
+                                        >
+                                            <PdfIcon className="w-4 h-4" />
+                                            Export PDF
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
                                         {isAllVenues
                                             ? 'Setiap venue harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.'
@@ -670,7 +737,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedVenuePopup(null)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                            <button onClick={() => setSelectedVenuePopup(null)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                                 <CloseIcon className="w-5 h-5" />
                             </button>
                         </div>
