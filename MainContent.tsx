@@ -281,7 +281,7 @@ const MonthlyBookingStatus: React.FC<{ userRole: UserRole; assignedVenue: string
                         <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">Distribusi Status Booking</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {Object.entries(bookingStats).map(([status, count]) => (
-                                <div key={status} className="text-center p-3 bg-white/5 rounded-lg">
+                                <div key={status} className="text-center p-3 bg-gray-50 rounded-lg">
                                     <p className="text-2xl font-bold text-[var(--color-text-primary)]">{count}</p>
                                     <p className="text-sm text-[var(--color-text-secondary)]">{status}</p>
                                 </div>
@@ -391,7 +391,7 @@ const UpcomingEvents: React.FC<UpcomingEventsProps> = ({ setActiveView, userRole
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-2">
                                         <div className={`w-3 h-3 rounded-full ${getEventStatusColor(status)}`}></div>
-                                        <span className="text-xs font-medium text-[var(--color-text-secondary)] px-2 py-1 rounded-full bg-white/10 uppercase">{event.jenisBooking}</span>
+                                        <span className="text-xs font-medium text-[var(--color-text-secondary)] px-2 py-1 rounded-full bg-gray-100 uppercase">{event.jenisBooking}</span>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm font-semibold text-[var(--color-text-primary)]">
@@ -493,14 +493,14 @@ const DirektorCalendarModal: React.FC<DirektorCalendarModalProps> = ({ events, o
     }, [events]);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-6xl w-full max-h-[95vh] p-4 sm:p-6 md:p-8 relative border border-[var(--color-border)] flex flex-col">
                 <div className="flex justify-between items-start mb-4 sm:mb-6 flex-shrink-0">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Dashboard Kalender Event</h2>
                         <p className="text-sm text-[var(--color-text-secondary)] mt-1">Ringkasan semua event untuk Direktur</p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                 </div>
@@ -550,7 +550,7 @@ const DirektorCalendarModal: React.FC<DirektorCalendarModalProps> = ({ events, o
                     <div className="text-sm text-[var(--color-text-secondary)]">
                         Total Events: {events.length}
                     </div>
-                    <button onClick={onClose} className="px-4 sm:px-6 py-2 sm:py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors w-full sm:w-auto">
+                    <button onClick={onClose} className="px-4 sm:px-6 py-2 sm:py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors w-full sm:w-auto">
                         Tutup Dashboard
                     </button>
                 </div>
@@ -672,7 +672,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
                                             }
                                         }
                                     }}
-                                    className="absolute top-3 right-3 text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1.5 rounded-full hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute top-3 right-3 text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1.5 rounded-full hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                                     aria-label={`Hapus venue ${venue.name}`}
                                 >
                                     <TrashIcon className="w-4 h-4" />
@@ -708,17 +708,17 @@ const BookingStatusBadge: React.FC<{ status: BookingStatus }> = ({ status }) => 
     switch (status) {
         case 'Lunas':
         case 'Booking':
-            statusClasses = 'bg-green-400/10 text-green-300';
+            statusClasses = 'bg-green-50 text-green-600';
             break;
         case 'DP':
         case 'Soft Booking':
-            statusClasses = 'bg-yellow-400/10 text-yellow-300';
+            statusClasses = 'bg-yellow-50 text-yellow-600';
             break;
         case 'Waiting List':
-            statusClasses = 'bg-gray-400/10 text-gray-300';
+            statusClasses = 'bg-gray-100 text-gray-600';
             break;
         default:
-            statusClasses = 'bg-slate-400/10 text-slate-300';
+            statusClasses = 'bg-gray-100 text-gray-600';
             break;
     }
 
@@ -731,8 +731,8 @@ const BookingStatusBadge: React.FC<{ status: BookingStatus }> = ({ status }) => 
 
 const JenisAcaraBadge: React.FC<{ jenis: 'Wedding' | 'Non Wedding' }> = ({ jenis }) => {
     const jenisClasses = jenis === 'Wedding'
-        ? 'bg-pink-400/10 text-pink-300'
-        : 'bg-sky-400/10 text-sky-300';
+        ? 'bg-pink-50 text-pink-600'
+        : 'bg-sky-50 text-sky-600';
 
     return (
         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${jenisClasses}`}>
@@ -1195,7 +1195,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                 <div className="card p-0 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left min-w-full table-fixed">
-                            <thead className="bg-white/5">
+                            <thead className="bg-gray-50">
                                 <tr className="text-[var(--color-text-secondary)]">
                                     {userRole !== 'Direktor' && (
                                         <th className="px-1 sm:px-2 py-2 sm:py-3 w-8 sm:w-10">
@@ -1233,7 +1233,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                 ) : pageDeals.length > 0 ? (
                                     pageDeals.map((deal) => (
                                         <tr key={deal.id}
-                                            className={`border-t border-[var(--color-border)] transition-colors ${selectedDeals.has(deal.id) ? 'bg-violet-500/10' : 'hover:bg-white/5'} ${userRole === 'Direktor' ? '' : 'cursor-pointer'}`}
+                                            className={`border-t border-[var(--color-border)] transition-colors ${selectedDeals.has(deal.id) ? 'bg-indigo-50' : 'hover:bg-gray-50'} ${userRole === 'Direktor' ? '' : 'cursor-pointer'}`}
                                             onClick={() => { if (userRole !== 'Direktor') setEditingDeal(deal); }}
                                         >
                                             {userRole !== 'Direktor' && (
@@ -1263,7 +1263,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                                     <div className="flex items-center justify-end gap-1">
                                                         <button
                                                             onClick={() => setEditingDeal(deal)}
-                                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-1 rounded-full hover:bg-white/5 transition-colors" aria-label={`Edit ${deal.namaClient}`}>
+                                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-1 rounded-full hover:bg-gray-50 transition-colors" aria-label={`Edit ${deal.namaClient}`}>
                                                             <EditIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                                                         </button>
                                                         <button
@@ -1277,7 +1277,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                                                     }
                                                                 }
                                                             }}
-                                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1 rounded-full hover:bg-red-50 transition-colors"
                                                             aria-label={`Delete ${deal.namaClient}`}
                                                         >
                                                             <TrashIcon className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1327,7 +1327,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => setEditingDeal(deal)}
-                                                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-2 rounded-full hover:bg-white/5 transition-colors"
+                                                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-2 rounded-full hover:bg-gray-50 transition-colors"
                                                     aria-label={`Edit ${deal.namaClient}`}
                                                 >
                                                     <EditIcon className="w-4 h-4" />
@@ -1343,7 +1343,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                                             }
                                                         }
                                                     }}
-                                                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-2 rounded-full hover:bg-red-500/10 transition-colors"
+                                                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-2 rounded-full hover:bg-red-50 transition-colors"
                                                     aria-label={`Delete ${deal.namaClient}`}
                                                 >
                                                     <TrashIcon className="w-4 h-4" />
@@ -1599,7 +1599,7 @@ const VenueDetailView: React.FC<VenueDetailViewProps> = ({ venueName, setLaporan
                             {selectedEmployeeIds.size > 0 && (
                                 <button
                                     onClick={handleDeleteSelected}
-                                    className="bg-rose-500 text-white font-semibold py-2.5 px-5 flex items-center rounded-xl hover:bg-rose-600 transition-all duration-200 shadow-sm"
+                                    className="bg-red-500 text-white font-semibold py-2.5 px-5 flex items-center rounded-xl hover:bg-red-600 transition-all duration-200 shadow-sm"
                                 >
                                     <TrashIcon className="w-5 h-5 mr-2" />
                                     Hapus ({selectedEmployeeIds.size})
@@ -1620,7 +1620,7 @@ const VenueDetailView: React.FC<VenueDetailViewProps> = ({ venueName, setLaporan
             <div className="card p-0 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-full table-fixed">
-                        <thead className="bg-white/5">
+                        <thead className="bg-gray-50">
                             <tr className="text-[var(--color-text-secondary)]">
                                 {userRole !== 'Direktor' && (
                                     <th className="p-1 sm:p-2 w-8 sm:w-10">
@@ -1648,7 +1648,7 @@ const VenueDetailView: React.FC<VenueDetailViewProps> = ({ venueName, setLaporan
                                 </tr>
                             ) : marketingStaff.length > 0 ? (
                                 marketingStaff.map((person) => (
-                                    <tr key={person.id} className={`border-t border-[var(--color-border)] transition-colors ${selectedEmployeeIds.has(person.id!) ? 'bg-violet-500/10' : 'hover:bg-white/5'}`}>
+                                    <tr key={person.id} className={`border-t border-[var(--color-border)] transition-colors ${selectedEmployeeIds.has(person.id!) ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
                                         {userRole !== 'Direktor' && (
                                             <td className="p-1 sm:p-2">
                                                 <input
@@ -1728,7 +1728,7 @@ const MainContent: React.FC<MainContentProps> = ({ activeView, setActiveView, se
     };
 
     return (
-        <main className="transition-all duration-300 w-full">
+        <main className="w-full px-6 lg:px-8">
             <Header setActiveView={setActiveView} onLogout={onLogout} />
             <div className="mt-4">
                 {renderContent()}

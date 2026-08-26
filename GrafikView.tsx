@@ -398,7 +398,7 @@ const GrafikView: React.FC<GrafikViewProps> = ({ userRole, assignedVenue }) => {
                     <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] p-6 border-b border-[var(--color-border)]">Ringkasan Per Venue</h2>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                            <thead className="bg-white/5">
+                            <thead className="bg-gray-50">
                                 <tr className="text-[var(--color-text-secondary)]">
                                     <th className="p-3 sm:p-4 font-semibold text-sm">Venue</th>
                                     <th className="p-3 sm:p-4 font-semibold text-sm">Total Laporan</th>
@@ -454,7 +454,7 @@ const GrafikView: React.FC<GrafikViewProps> = ({ userRole, assignedVenue }) => {
                                            </div>
                                        </div>
                                    ) : (
-                                       <div className="flex-grow w-full flex items-center justify-center p-4 my-4 border border-dashed border-[var(--color-border)] rounded-xl bg-white/5">
+                                       <div className="flex-grow w-full flex items-center justify-center p-4 my-4 border border-dashed border-[var(--color-border)] rounded-xl bg-gray-50">
                                            <p className="text-[var(--color-text-secondary)] text-center">Tidak ada data laporan.</p>
                                        </div>
                                    )}

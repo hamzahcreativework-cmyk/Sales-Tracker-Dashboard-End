@@ -374,47 +374,126 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         }
 
         const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const marginX = 14;
+        const contentW = pageWidth - 2 * marginX;
         const monthYear = new Intl.DateTimeFormat('id-ID', { year: 'numeric', month: 'long' }).format(currentDate);
+        const now = new Date();
+        const timestamp = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            + '  |  ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+            + ' WIB';
+
         const title = effectiveVenueName
             ? `Target Weekend ${effectiveVenueName} Belum Tercapai`
             : 'Target Weekend Venue Belum Tercapai';
 
-        doc.setFontSize(14);
-        doc.text(title, 14, 16);
-        doc.setFontSize(10);
-        doc.text(`Periode: ${monthYear}`, 14, 23);
+        // --- Header ---
+        doc.setFontSize(15);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text(title, marginX, 18);
 
-        const tableRows: (string | number)[][] = [];
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Periode: ${monthYear}`, marginX, 25);
+
+        doc.setDrawColor(30, 30, 30);
+        doc.setLineWidth(0.6);
+        doc.line(marginX, 29, pageWidth - marginX, 29);
+
+        // --- Summary line ---
+        const totalWeekends = venueWeekendWarnings.totalWeekends;
+        let summaryText: string;
+        if (effectiveVenueName) {
+            const achieved = totalWeekends - displayedWarnings[0].missing.length;
+            summaryText = `Weekend tercapai: ${achieved} dari ${totalWeekends}  |  Belum tercapai: ${displayedWarnings[0].missing.length}`;
+        } else {
+            const totalVenues = VENUES.length;
+            const venuesNotMet = displayedWarnings.length;
+            summaryText = `Total weekend: ${totalWeekends}  |  Venue tercapai: ${totalVenues - venuesNotMet} dari ${totalVenues}  |  Venue belum tercapai: ${venuesNotMet}`;
+        }
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        doc.text(summaryText, marginX, 36);
+
+        // --- Table ---
+        const tableRows: string[][] = [];
+        let rowIndex = 0;
         displayedWarnings.forEach(v => {
+            const achieved = v.totalWeekends - v.missing.length;
             v.missing.forEach(w => {
                 const missingParts: string[] = [];
                 if (!w.satHasEvent) missingParts.push(`Sabtu ${w.saturday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`);
                 if (!w.sunHasEvent) missingParts.push(`Minggu ${w.sunday.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`);
                 tableRows.push([
+                    String(++rowIndex),
                     v.venueName,
                     `Weekend ${w.weekNum}`,
                     missingParts.join(' & '),
-                    `${v.totalWeekends - v.missing.length}/${v.totalWeekends}`,
+                    `${achieved}/${v.totalWeekends}`,
                 ]);
             });
         });
 
         autoTable(doc, {
-            head: [['Venue', 'Weekend', 'Belum Ada Event', 'Tercapai']],
+            head: [['No', 'Venue', 'Weekend', 'Hari Belum Ada Event', 'Tercapai']],
             body: tableRows,
-            startY: 28,
-            theme: 'grid',
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [217, 119, 6] },
+            startY: 41,
+            theme: 'plain',
+            styles: {
+                fontSize: 9,
+                cellPadding: 3.5,
+                textColor: [30, 30, 30],
+                lineColor: [180, 180, 180],
+                lineWidth: 0.2,
+            },
+            headStyles: {
+                fillColor: [240, 240, 240],
+                textColor: [30, 30, 30],
+                fontStyle: 'bold',
+                fontSize: 9,
+                halign: 'center',
+            },
+            bodyStyles: {
+                fillColor: [255, 255, 255],
+            },
+            alternateRowStyles: {
+                fillColor: [248, 248, 248],
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 12 },
+                2: { halign: 'center' },
+                4: { halign: 'center', cellWidth: 24 },
+            },
+            tableLineColor: [180, 180, 180],
+            tableLineWidth: 0.2,
+            margin: { left: marginX, right: marginX },
+            didParseCell: (data: any) => {
+                if (data.section === 'body') {
+                    data.cell.styles.lineColor = [200, 200, 200];
+                    data.cell.styles.lineWidth = 0.15;
+                }
+            },
         });
 
-        const finalY = (doc as any).lastAutoTable?.finalY || 28 + tableRows.length * 10;
-        doc.setFontSize(9);
-        doc.setTextColor(120);
-        const summaryText = effectiveVenueName
-            ? `Summary: ${venueWeekendWarnings.totalWeekends - displayedWarnings[0].missing.length}/${venueWeekendWarnings.totalWeekends} weekend tercapai`
-            : `Summary: ${displayedWarnings.length} dari ${VENUES.length} venue belum mencapai target weekend`;
-        doc.text(summaryText, 14, finalY + 8);
+        // --- Footer on every page ---
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.3);
+            doc.line(marginX, pageHeight - 16, pageWidth - marginX, pageHeight - 16);
+
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(130, 130, 130);
+            doc.text(`Dicetak: ${timestamp}`, marginX, pageHeight - 10);
+            doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - marginX, pageHeight - 10, { align: 'right' });
+        }
 
         doc.save(`target-weekend-belum-tercapai-${monthYear.replace(/\s+/g, '-').toLowerCase()}.pdf`);
     };

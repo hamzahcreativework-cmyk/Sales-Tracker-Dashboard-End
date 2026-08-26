@@ -259,7 +259,7 @@ const App: React.FC = () => {
 
     return (
         <VenueProvider>
-        <div className="grid grid-cols-1 lg:grid-cols-[16rem,1fr] w-full max-w-screen-2xl mx-auto p-2 sm:p-3 md:p-4 lg:p-6 gap-2 sm:gap-3 md:gap-4 lg:gap-6 transition-all duration-300 min-h-screen">
+        <div className="grid grid-cols-1 lg:grid-cols-[16rem,1fr] w-full max-w-screen-2xl mx-auto min-h-screen transition-all duration-300">
             <Sidebar
                 isOpen={isSidebarOpen}
                 setIsOpen={setIsSidebarOpen}
@@ -280,7 +280,7 @@ const App: React.FC = () => {
 
             <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden fixed top-4 left-4 z-40 text-[var(--color-text-primary)] bg-[var(--color-surface)]/70 backdrop-blur-sm rounded-full p-2 shadow-lg border border-[var(--color-border)]"
+                className="lg:hidden fixed top-4 left-4 z-40 text-[var(--color-text-primary)] bg-white shadow-md rounded-full p-2 border border-[var(--color-border)]"
                 aria-label="Open sidebar"
             >
                 <MenuIcon className="w-6 h-6" />

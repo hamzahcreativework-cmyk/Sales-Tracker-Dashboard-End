@@ -199,7 +199,7 @@ const LaporanModal: React.FC<LaporanModalProps> = ({ isOpen, onClose, marketingN
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-7xl w-full p-6 sm:p-8 relative max-h-[90vh] flex flex-col border border-[var(--color-border)]">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-6 flex-shrink-0">
@@ -207,7 +207,7 @@ const LaporanModal: React.FC<LaporanModalProps> = ({ isOpen, onClose, marketingN
                         <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">{`Laporan: ${marketingName}`}</h2>
                         <p className="text-base sm:text-lg text-[var(--color-text-secondary)]">{venueName}</p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>

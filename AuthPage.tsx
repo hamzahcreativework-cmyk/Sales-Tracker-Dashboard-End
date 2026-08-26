@@ -10,7 +10,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
     const [view, setView] = useState<'login' | 'signup'>('login');
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[var(--color-background)]">
+        <div className="min-h-screen w-full flex">
             {view === 'login' ? (
                 <LoginView onLoginSuccess={onAuthSuccess} onSwitchToSignUp={() => setView('signup')} />
             ) : (

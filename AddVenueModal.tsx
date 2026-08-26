@@ -43,14 +43,14 @@ const AddVenueModal: React.FC<AddVenueModalProps> = ({ isOpen, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-8 relative border border-[var(--color-border)]">
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Tambah Venue</h2>
                         <p className="text-sm text-[var(--color-text-secondary)]">Masukkan data venue baru</p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -97,7 +97,7 @@ const AddVenueModal: React.FC<AddVenueModalProps> = ({ isOpen, onClose }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors"
+                            className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors"
                             disabled={isSaving}
                         >
                             Batal

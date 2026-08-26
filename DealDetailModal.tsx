@@ -143,7 +143,7 @@ const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDeal
                     type="button"
                     onClick={() => onChange(option)}
                     disabled={isReadOnly}
-                    className={`flex-1 text-sm font-semibold py-1.5 px-2 rounded-md transition-all duration-200 disabled:cursor-not-allowed ${value === option ? `${map[option].color} shadow-sm bg-opacity-100` : 'text-[var(--color-text-secondary)] hover:bg-white/5'}`}
+                    className={`flex-1 text-sm font-semibold py-1.5 px-2 rounded-md transition-all duration-200 disabled:cursor-not-allowed ${value === option ? `${map[option].color} shadow-sm bg-opacity-100` : 'text-[var(--color-text-secondary)] hover:bg-gray-50'}`}
                 >
                     {map[option].label}
                 </button>
@@ -159,7 +159,7 @@ const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDeal
     );
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-5xl w-full p-6 sm:p-8 relative border border-[var(--color-border)] max-h-[95vh] flex flex-col">
                 <div className="flex justify-between items-start mb-4 flex-shrink-0">
                     <input 
@@ -170,7 +170,7 @@ const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDeal
                         className="text-2xl font-bold text-[var(--color-text-primary)] bg-transparent border-none p-0 focus:ring-0 w-full"
                         readOnly={isReadOnly}
                     />
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -363,7 +363,7 @@ const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDeal
                         )}
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={onClose} className="px-6 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors">
+                        <button onClick={onClose} className="px-6 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors">
                             Close
                         </button>
                         {!isReadOnly && (

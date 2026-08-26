@@ -50,14 +50,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
     const isEditingSelf = currentUser?.id === user.id;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-8 relative border border-[var(--color-border)]">
                 <div className="flex justify-between items-start mb-6">
                     <div>
                         <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Edit User</h2>
                         <p className="text-md text-[var(--color-text-secondary)]">{user.name}</p>
                     </div>
-                    <button onClick={handleClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={handleClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -126,7 +126,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
                         <button 
                             type="button" 
                             onClick={handleClose} 
-                            className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors disabled:opacity-50"
+                            className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors disabled:opacity-50"
                             disabled={isSaving}
                         >
                             Batal

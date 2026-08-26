@@ -196,14 +196,14 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onU
     };
     
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 relative border border-[var(--color-border)] max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-start mb-6 flex-shrink-0">
                     <div>
                         <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Edit Event</h2>
                         <p className="text-md text-[var(--color-text-secondary)]">{formattedDate ? `Untuk tanggal: ${formattedDate}` : event.eventName}</p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -338,7 +338,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onU
                         )}
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={onClose} className="px-6 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors">
+                        <button onClick={onClose} className="px-6 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors">
                             Tutup
                         </button>
                         {!isReadOnly && (

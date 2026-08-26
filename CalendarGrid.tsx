@@ -60,7 +60,7 @@ const MoreEventsModal: React.FC<{
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-md w-full p-6 relative border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-1">Semua Event</h3>
                 <p className="text-sm text-[var(--color-text-secondary)] mb-4">{formattedDate}</p>
-                <button onClick={onClose} className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                <button onClick={onClose} className="absolute top-4 right-4 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                     <CloseIcon className="w-5 h-5" />
                 </button>
                 <div className="max-h-80 overflow-y-auto space-y-2 pr-2 -mr-2">

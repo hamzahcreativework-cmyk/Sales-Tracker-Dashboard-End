@@ -154,14 +154,14 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ isOpen, onClose, onSave, as
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 fade-in">
             <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 relative border border-[var(--color-border)] max-h-[90vh] flex flex-col">
                 <div className="flex justify-between items-start mb-6 flex-shrink-0">
                     <div>
                         <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Tambah Deal Baru</h2>
                         <p className="text-md text-[var(--color-text-secondary)]">Masukkan detail deal yang baru.</p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] p-2 rounded-full hover:bg-gray-100 transition-colors">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </div>
@@ -355,7 +355,7 @@ const AddDealModal: React.FC<AddDealModalProps> = ({ isOpen, onClose, onSave, as
                         </div>
                     </div>
                      <div className="flex space-x-4 mt-8 pt-6 border-t border-[var(--color-border)] flex-shrink-0">
-                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-white/5 font-semibold transition-colors">
+                        <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-xl hover:bg-gray-50 font-semibold transition-colors">
                             Batal
                         </button>
                         <button type="submit" className="flex-1 px-4 py-2.5 btn-primary">

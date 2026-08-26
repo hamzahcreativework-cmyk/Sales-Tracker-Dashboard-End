@@ -8,7 +8,7 @@ import { FunctionsHttpError, FunctionsFetchError, User } from '@supabase/supabas
 
 const RoleBadge: React.FC<{ role: UserRole }> = ({ role }) => {
     const roleClasses = role === 'Admin'
-        ? 'bg-violet-400/10 text-violet-300'
+        ? 'bg-indigo-50 text-indigo-600'
         : role === 'Direktor'
         ? 'bg-sky-400/10 text-sky-300'
         : role === 'IT'
@@ -306,7 +306,7 @@ const ManagemenUserView: React.FC<{ userRole: UserRole }> = ({ userRole }) => {
                                 filteredUsers.map((user) => (
                                     <tr
                                         key={user.id}
-                                        className="border-t border-[var(--color-border)] hover:bg-white/5"
+                                        className="border-t border-[var(--color-border)] hover:bg-gray-50"
                                     >
                                         <td className="p-3 sm:p-4">
                                             <div className="flex items-center gap-4">
