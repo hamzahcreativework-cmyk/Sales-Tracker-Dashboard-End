@@ -272,6 +272,9 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             waitingList: monthEvents.filter(e => e.jenisBooking === 'Waiting List').length,
             dp: monthEvents.filter(e => e.jenisBooking === 'DP').length,
             lunas: monthEvents.filter(e => e.jenisBooking === 'Lunas').length,
+            waktuPagi: monthEvents.filter(e => e.waktuAcara === 'Pagi').length,
+            waktuMalam: monthEvents.filter(e => e.waktuAcara === 'Malam').length,
+            waktuFullDay: monthEvents.filter(e => e.waktuAcara === 'Full Day').length,
         };
     }, [eventsForGrid, currentDate]);
 
@@ -602,6 +605,15 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                         ))}
                     </div>
                     
+                    <div className="flex items-baseline gap-3 mt-4">
+                        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Waktu Acara:</h3>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 border border-amber-300">🌅 Pagi: {monthlyStats.waktuPagi}</span>
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-white border border-slate-700">🌙 Malam: {monthlyStats.waktuMalam}</span>
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">☀️ Full Day: {monthlyStats.waktuFullDay}</span>
+                        </div>
+                    </div>
+
                     {viewMode === 'agenda' && (
                         <div className="flex items-baseline gap-3 mt-4">
                             <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Filter Minggu:</h3>
@@ -831,11 +843,15 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                     {venuePopupEvents.map(event => {
                                         const eventDate = dateUtils.parseLocalDate(event.eventDate);
                                         const formattedDate = eventDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
-                                        const statusColor = event.jenisBooking === 'Booking' || event.jenisBooking === 'Lunas'
-                                            ? 'bg-green-500/10 border-green-500 text-green-800'
+                                        const statusBorder = event.jenisBooking === 'Booking' || event.jenisBooking === 'Lunas'
+                                            ? 'border-green-500'
                                             : event.jenisBooking === 'Waiting List'
-                                            ? 'bg-gray-500/10 border-gray-500 text-gray-800'
-                                            : 'bg-yellow-500/10 border-yellow-500 text-yellow-800';
+                                            ? 'border-gray-500'
+                                            : 'border-yellow-500';
+                                        const waktuBg = event.waktuAcara === 'Pagi' ? 'bg-amber-100/70'
+                                            : event.waktuAcara === 'Malam' ? 'bg-slate-300'
+                                            : event.waktuAcara === 'Full Day' ? 'bg-emerald-100/70'
+                                            : 'bg-gray-50';
                                         return (
                                             <button
                                                 key={event.id}
@@ -843,7 +859,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                                     setSelectedVenuePopup(null);
                                                     handleEventClick(event);
                                                 }}
-                                                className={`w-full text-left p-3 rounded-lg border-l-4 transition-colors hover:bg-opacity-30 ${statusColor}`}
+                                                className={`w-full text-left p-3 rounded-lg border-l-4 transition-colors hover:bg-opacity-30 ${statusBorder} ${waktuBg}`}
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <p className="font-semibold text-sm truncate flex-1">{event.eventOrder || 1}. {event.eventName}</p>
@@ -853,7 +869,16 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-secondary)]">
                                                     <span>{formattedDate}</span>
-                                                    {event.waktuAcara && <span>· {event.waktuAcara}</span>}
+                                                    {event.waktuAcara && (
+                                                        <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
+                                                            event.waktuAcara === 'Pagi' ? 'bg-amber-100 text-amber-700' :
+                                                            event.waktuAcara === 'Malam' ? 'bg-slate-800 text-white' :
+                                                            event.waktuAcara === 'Full Day' ? 'bg-emerald-100 text-emerald-700' :
+                                                            'bg-gray-100 text-gray-700'
+                                                        }`}>
+                                                            {event.waktuAcara}
+                                                        </span>
+                                                    )}
                                                     {event.paxCount > 0 && <span>· {event.paxCount} pax</span>}
                                                     {event.marketingName && <span>· {event.marketingName}</span>}
                                                 </div>

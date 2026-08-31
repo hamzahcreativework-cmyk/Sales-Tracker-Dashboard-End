@@ -23,6 +23,19 @@ interface AgendaViewProps {
     onEventClick: (event: CalendarEventEntry) => void;
 }
 
+const getWaktuStyles = (waktuAcara?: string): { bg: string; badge: string; badgeText: string } => {
+    switch (waktuAcara) {
+        case 'Pagi':
+            return { bg: 'bg-amber-100/70', badge: 'bg-amber-100', badgeText: 'text-amber-700' };
+        case 'Malam':
+            return { bg: 'bg-slate-300', badge: 'bg-slate-800', badgeText: 'text-white' };
+        case 'Full Day':
+            return { bg: 'bg-emerald-100/70', badge: 'bg-emerald-100', badgeText: 'text-emerald-700' };
+        default:
+            return { bg: 'bg-gray-50', badge: 'bg-gray-100', badgeText: 'text-gray-700' };
+    }
+};
+
 const getEventStatusStyles = (status: EventStatus): { border: string; bg: string; text: string; dot: string } => {
     switch (status) {
         case 'Confirmed':
@@ -77,12 +90,13 @@ const AgendaView: React.FC<AgendaViewProps> = ({ currentDate, events, onEventCli
                                 <div className="space-y-3">
                                     {groupedEvents[dateStr].map(event => {
                                         const styles = getEventStatusStyles(event.status);
+                                        const waktuStyles = getWaktuStyles(event.waktuAcara);
                                         const venueColor = getVenueColor(event.venueName);
                                         return (
                                             <button
                                                 key={event.id}
                                                 onClick={() => onEventClick(event)}
-                                                className={`w-full flex items-start gap-3 p-4 rounded-lg text-left transition-all duration-200 border-l-4 ${styles.border} ${styles.bg} hover:shadow-md hover:border-l-8 hover:-translate-y-px`}
+                                                className={`w-full flex items-start gap-3 p-4 rounded-lg text-left transition-all duration-200 border-l-4 ${styles.border} ${waktuStyles.bg} hover:shadow-md hover:border-l-8 hover:-translate-y-px`}
                                             >
                                                 <div className={`w-3 h-3 rounded-full flex-shrink-0 mt-1 ${styles.dot}`}></div>
                                                 <span className="flex-shrink-0 w-5 h-5 mt-0.5 text-[var(--color-text-secondary)]">
