@@ -32,6 +32,16 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
     const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
     const [assignedVenue, setAssignedVenue] = useState<string | null>(null);
     const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(new Set());
+    const [theme, setTheme] = useState(() => {
+        return localStorage.getItem('theme') || 'light';
+    });
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -386,14 +396,14 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
             {/* Search bar - decorative */}
             <div className="flex items-center gap-2 flex-1 max-w-sm">
                 <div className="relative flex items-center w-full">
-                    <SearchIcon className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <SearchIcon className="absolute left-3 w-4 h-4 text-[var(--color-text-secondary)] pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Search everything"
                         readOnly
-                        className="w-full pl-9 pr-14 py-2 text-sm bg-white border border-gray-200 rounded-lg text-gray-500 placeholder-gray-400 focus:outline-none cursor-default font-[Inter,sans-serif]"
+                        className="w-full pl-9 pr-14 py-2 text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-secondary)] placeholder-gray-400 focus:outline-none cursor-default font-[Inter,sans-serif]"
                     />
-                    <span className="absolute right-3 flex items-center gap-0.5 text-xs text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 select-none font-[Inter,sans-serif]">
+                    <span className="absolute right-3 flex items-center gap-0.5 text-xs text-[var(--color-text-secondary)] bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1.5 py-0.5 select-none font-[Inter,sans-serif]">
                         ⌘K
                     </span>
                 </div>
@@ -401,10 +411,17 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
 
             {/* Right side controls */}
             <div className="flex items-center gap-3">
+                <button
+                    onClick={toggleTheme}
+                    className="w-11 h-11 flex items-center justify-center rounded-lg border transition-colors bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)]"
+                    title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                >
+                    <span className="text-lg">{theme === 'light' ? '🌙' : '☀️'}</span>
+                </button>
                 <div className="relative" ref={notificationsRef}>
                     <button
                         onClick={() => setIsNotificationsOpen(prev => !prev)}
-                        className="w-11 h-11 flex items-center justify-center text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors relative"
+                        className="w-11 h-11 flex items-center justify-center text-[var(--color-text-secondary)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-interactive)] transition-colors relative"
                         aria-haspopup="true"
                         aria-expanded={isNotificationsOpen}
                     >
@@ -417,9 +434,9 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
                     </button>
 
                     {isNotificationsOpen && (
-                        <div className="absolute top-full right-0 mt-3 w-80 md:w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 fade-in">
-                            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                                <h4 className="font-semibold text-lg text-gray-900">Notifications</h4>
+                        <div className="absolute top-full right-0 mt-3 w-80 md:w-96 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-lg z-50 fade-in">
+                            <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center">
+                                <h4 className="font-semibold text-lg text-[var(--color-text-primary)]">Notifications</h4>
                                 {notifications.length > 0 && (
                                     <div className="flex gap-2">
                                         <button
@@ -449,11 +466,11 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
                                     ))
                                 ) : (
                                     <div className="text-center py-12 px-4">
-                                        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
-                                            <BellIcon className="w-8 h-8 text-gray-400" />
+                                        <div className="w-16 h-16 mx-auto bg-[var(--color-interactive)] rounded-full flex items-center justify-center">
+                                            <BellIcon className="w-8 h-8 text-[var(--color-text-secondary)]" />
                                         </div>
-                                        <p className="mt-4 font-semibold text-gray-800">No new notifications</p>
-                                        <p className="text-sm text-gray-500">You're all caught up!</p>
+                                        <p className="mt-4 font-semibold text-[var(--color-text-primary)]">No new notifications</p>
+                                        <p className="text-sm text-[var(--color-text-secondary)]">You're all caught up!</p>
                                     </div>
                                 )}
                             </div>
@@ -462,26 +479,26 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
                 </div>
 
                 <div className="relative" ref={profileRef}>
-                    <button onClick={() => setIsProfileOpen(prev => !prev)} className="flex items-center gap-3 text-left bg-white border border-gray-200 rounded-lg p-2 transition-colors hover:bg-gray-50">
+                    <button onClick={() => setIsProfileOpen(prev => !prev)} className="flex items-center gap-3 text-left bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-2 transition-colors hover:bg-[var(--color-interactive)]">
                         <img src={avatarUrl} alt="Admin" className="w-9 h-9 rounded-md object-cover" />
                         <div className="hidden md:block">
-                            <p className="font-semibold text-sm text-gray-800 leading-tight">{displayName}</p>
-                            <p className="text-gray-500 text-xs leading-tight">{displayEmail}</p>
+                            <p className="font-semibold text-sm text-[var(--color-text-primary)] leading-tight">{displayName}</p>
+                            <p className="text-[var(--color-text-secondary)] text-xs leading-tight">{displayEmail}</p>
                         </div>
                     </button>
                     {isProfileOpen && (
-                        <div className="absolute top-full right-0 mt-3 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 fade-in p-2">
-                            <div className="px-3 py-2 border-b border-gray-200">
-                                <p className="font-semibold text-sm text-gray-800">{displayName}</p>
-                                <p className="text-gray-500 text-xs truncate">{displayEmail}</p>
+                        <div className="absolute top-full right-0 mt-3 w-64 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-lg z-50 fade-in p-2">
+                            <div className="px-3 py-2 border-b border-[var(--color-border)]">
+                                <p className="font-semibold text-sm text-[var(--color-text-primary)]">{displayName}</p>
+                                <p className="text-[var(--color-text-secondary)] text-xs truncate">{displayEmail}</p>
                             </div>
                             <div className="py-2">
-                                <a href="#" onClick={(e) => { e.preventDefault(); setActiveView({ type: 'Profile' }); setIsProfileOpen(false); }} className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors">
+                                <a href="#" onClick={(e) => { e.preventDefault(); setActiveView({ type: 'Profile' }); setIsProfileOpen(false); }} className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-[var(--color-interactive)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors">
                                     <UserCircleIcon className="w-5 h-5" />
                                     <span>Profile Settings</span>
                                 </a>
                             </div>
-                            <div className="py-2 border-t border-gray-200">
+                            <div className="py-2 border-t border-[var(--color-border)]">
                                 <a href="#" onClick={(e) => { e.preventDefault(); onLogout(); }} className="flex items-center gap-3 px-3 py-2 text-sm rounded-lg hover:bg-red-50 text-red-500 transition-colors">
                                     <LogoutIcon className="w-5 h-5" />
                                     <span>Logout</span>

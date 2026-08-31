@@ -31,8 +31,32 @@
             --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.04);
         }
 
+        [data-theme="dark"] {
+            --color-background: #0F172A;
+            --color-background-start: #0F172A;
+            --color-background-end: #1E293B;
+            --color-surface: #1E293B;
+            --color-primary: #6366F1;
+            --color-primary-dark: #818CF8;
+            --color-primary-hover: #818CF8;
+            --color-primary-surface: rgba(99, 102, 241, 0.15);
+            --color-text-primary: #F1F5F9;
+            --color-text-secondary: #94A3B8;
+            --color-border: #334155;
+            --color-interactive: #334155;
+            --color-interactive-hover: #475569;
+            --color-danger: #F87171;
+            --color-success: #34D399;
+            --color-warning: #FBBF24;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+            --shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+            --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.3);
+            color-scheme: dark;
+        }
+
         html {
-            color-scheme: light;
+            color-scheme: light dark;
             font-size: 14px;
         }
 
@@ -61,8 +85,8 @@
 
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+        ::-webkit-scrollbar-thumb { background: var(--color-interactive-hover); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
 
         .card {
             background-color: var(--color-surface);
@@ -76,19 +100,19 @@
         }
         .form-input, .form-select {
             border-radius: 0.5rem;
-            border: 1px solid #D1D5DB;
-            background-color: #ffffff;
+            border: 1px solid var(--color-border);
+            background-color: var(--color-surface);
             color: var(--color-text-primary);
             transition: box-shadow 0.15s ease, border-color 0.15s ease;
         }
         .form-input::placeholder {
-            color: #9CA3AF;
+            color: var(--color-text-secondary);
         }
         .form-input:focus, .form-select:focus {
             outline: none;
             border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            background-color: var(--color-surface);
         }
         .btn-primary {
             background-color: var(--color-primary);

@@ -24,17 +24,17 @@ const NavLink: React.FC<{
     onClick?: () => void;
 }> = ({ icon, label, active, badge, onClick }) => (
     <a href="#" onClick={(e) => { e.preventDefault(); onClick?.(); }}
-        className={`flex items-center h-10 text-sm transition-all duration-200 relative mx-2 my-0.5 rounded-lg group ${active ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+        className={`flex items-center h-10 text-sm transition-all duration-200 relative mx-2 my-0.5 rounded-lg group ${active ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
         <span className="transition-all duration-300 mx-3">{icon}</span>
         <h3 className="font-medium">{label}</h3>
         {badge && (
-            <span className="ml-auto mr-3 text-xs bg-gray-100 text-gray-600 font-bold px-2 py-0.5 rounded-full">{badge > 9 ? '9+' : badge}</span>
+            <span className="ml-auto mr-3 text-xs bg-[var(--color-interactive)] text-[var(--color-text-secondary)] font-bold px-2 py-0.5 rounded-full">{badge > 9 ? '9+' : badge}</span>
         )}
     </a>
 );
 
 const SectionLabel: React.FC<{ label: string }> = ({ label }) => (
-    <p className="px-4 pt-5 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+    <p className="px-4 pt-5 pb-1 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">{label}</p>
 );
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setActiveView, onLogout, userRole, assignedVenue }) => {
@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
     const sidebarContent = (
         <>
             {/* Brand / Logo area */}
-            <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+            <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--color-border)]">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,11 +66,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
                         </svg>
                     </div>
                     <div>
-                        <h1 className="font-bold text-sm text-gray-900 leading-tight">Kediaman Corp</h1>
-                        <p className="text-xs text-gray-500 leading-tight">Calendar Tracking</p>
+                        <h1 className="font-bold text-sm text-[var(--color-text-primary)] leading-tight">Kediaman Corp</h1>
+                        <p className="text-xs text-[var(--color-text-secondary)] leading-tight">Calendar Tracking</p>
                     </div>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="md:hidden text-gray-500 hover:text-gray-700">
+                <button onClick={() => setIsOpen(false)} className="md:hidden text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
                     <CloseIcon className="w-5 h-5" />
                 </button>
             </div>
@@ -129,22 +129,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
                     {/* Calendar Event Venue with submenu */}
                     <div className="mx-2 my-0.5">
                         <a href="#" onClick={(e) => { e.preventDefault(); setIsCalendarOpen(!isCalendarOpen); if (!isCalendarActive) setActiveView({ type: 'CalendarEvent', venueName: assignedVenue || undefined }) }}
-                            className={`flex items-center h-10 text-sm transition-all duration-200 relative rounded-lg group ${isCalendarActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+                            className={`flex items-center h-10 text-sm transition-all duration-200 relative rounded-lg group ${isCalendarActive ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
                             <span className="transition-all duration-300 mx-3"><CalendarIcon className="w-5 h-5" /></span>
                             <h3 className="font-medium">Calendar Event Venue</h3>
                             <svg className={`w-4 h-4 ml-auto mr-3 transition-transform duration-200 ${isCalendarOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                         </a>
                         {isCalendarOpen && (
-                            <div className="pl-5 mt-0.5 border-l-2 border-gray-200 ml-5 py-1">
+                            <div className="pl-5 mt-0.5 border-l-2 border-[var(--color-border)] ml-5 py-1">
                                 {!assignedVenue && (
                                     <a href="#" onClick={(e) => { e.preventDefault(); setActiveView({ type: 'CalendarEvent' }) }}
-                                        className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && !activeView.venueName ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
+                                        className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && !activeView.venueName ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
                                         <span>Semua Venue</span>
                                     </a>
                                 )}
                                 {displayedVenues.map(venue => (
                                     <a href="#" key={venue.name} onClick={(e) => { e.preventDefault(); setActiveView({ type: 'CalendarEvent', venueName: venue.name }) }}
-                                        className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && activeView.venueName === venue.name ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
+                                        className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && activeView.venueName === venue.name ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
                                         <span>{venue.name}</span>
                                     </a>
                                 ))}
@@ -173,17 +173,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
             </div>
 
             {/* User profile at bottom */}
-            <div className="border-t border-gray-200 px-4 py-3 flex items-center gap-3">
+            <div className="border-t border-[var(--color-border)] px-4 py-3 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                     <span className="text-indigo-600 text-xs font-bold">KC</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">Kediaman Corp</p>
-                    <p className="text-xs text-gray-500 truncate">Owner</p>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">Kediaman Corp</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] truncate">Owner</p>
                 </div>
                 <button
                     onClick={onLogout}
-                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200 flex-shrink-0"
+                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] transition-colors duration-200 flex-shrink-0"
                     title="Logout"
                 >
                     <LogoutIcon className="w-5 h-5" />
@@ -197,7 +197,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
             {/* Mobile overlay */}
             {isOpen && <div onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" />}
 
-            <aside className={`fixed top-0 left-0 h-full w-64 bg-white z-50 flex flex-col transition-transform duration-300 ease-in-out border-r border-gray-200 lg:relative lg:translate-x-0 lg:flex ${isOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'}`}>
+            <aside className={`fixed top-0 left-0 h-full w-64 bg-[var(--color-surface)] z-50 flex flex-col transition-transform duration-300 ease-in-out border-r border-[var(--color-border)] lg:relative lg:translate-x-0 lg:flex ${isOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'}`}>
                 {sidebarContent}
             </aside>
         </>
