@@ -770,17 +770,30 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
         const fetchDeals = async () => {
             setIsLoading(true);
             try {
-                let query = supabase.from('deals').select('*').order('tanggalBooking', { ascending: false });
-                if (userRole === 'User' && assignedVenue) {
-                    query = query.eq('namaVenue', assignedVenue);
+                const PAGE_SIZE = 1000;
+                let allData: any[] = [];
+                let from = 0;
+                let hasMore = true;
+                while (hasMore) {
+                    let query = supabase.from('deals').select('*').order('tanggalBooking', { ascending: false }).range(from, from + PAGE_SIZE - 1);
+                    if (userRole === 'User' && assignedVenue) {
+                        query = query.eq('namaVenue', assignedVenue);
+                    }
+                    const { data, error } = await query;
+                    if (error) {
+                        console.error('Error fetching deals:', error.message);
+                        alert('Gagal memuat data dealing.');
+                        return;
+                    }
+                    if (data && data.length > 0) {
+                        allData = allData.concat(data);
+                        from += PAGE_SIZE;
+                        hasMore = data.length === PAGE_SIZE;
+                    } else {
+                        hasMore = false;
+                    }
                 }
-                const { data, error } = await query;
-                if (error) {
-                    console.error('Error fetching deals:', error.message);
-                    alert('Gagal memuat data dealing.');
-                } else {
-                    setDeals(data as DealingEntry[]);
-                }
+                setDeals(allData as DealingEntry[]);
             } catch (err) {
                 console.error('Unexpected error in fetchDeals:', err);
                 alert('Terjadi kesalahan tak terduga saat memuat data dealing.');

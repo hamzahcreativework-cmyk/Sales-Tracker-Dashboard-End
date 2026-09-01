@@ -246,11 +246,6 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
             console.log('Fetching events for counting...');
             let venuesToCount = effectiveVenueName ? [effectiveVenueName] : VENUES.map(v => v.name);
 
-            let query = supabase.from('deals').select('namaVenue, tanggalAcara, waktuAcara');
-            if (effectiveVenueName) {
-                query = query.eq('namaVenue', effectiveVenueName);
-            }
-
             let rangeStartValue = '';
             let rangeEndValue = '';
 
@@ -259,23 +254,41 @@ const EventCountingView: React.FC<EventCountingViewProps> = ({ userRole, assigne
                 if (yearBounds) {
                     rangeStartValue = yearBounds.start;
                     rangeEndValue = yearBounds.end;
-                    query = query.gte('tanggalAcara', rangeStartValue).lte('tanggalAcara', rangeEndValue);
                 }
             } else if (filterMode === 'range' && startDate && endDate) {
                 rangeStartValue = startDate;
                 rangeEndValue = endDate;
-                query = query.gte('tanggalAcara', rangeStartValue).lte('tanggalAcara', rangeEndValue);
             }
 
-            const { data, error: fetchError } = await query;
-            
-            if (fetchError) {
-                console.error('Error fetching deals:', fetchError.message);
-                setError(`Error: ${fetchError.message}`);
-                return;
+            const PAGE_SIZE = 1000;
+            let allData: any[] = [];
+            let from = 0;
+            let hasMore = true;
+
+            while (hasMore) {
+                let query = supabase.from('deals').select('namaVenue, tanggalAcara, waktuAcara').range(from, from + PAGE_SIZE - 1);
+                if (effectiveVenueName) {
+                    query = query.eq('namaVenue', effectiveVenueName);
+                }
+                if (rangeStartValue && rangeEndValue) {
+                    query = query.gte('tanggalAcara', rangeStartValue).lte('tanggalAcara', rangeEndValue);
+                }
+                const { data, error: fetchError } = await query;
+                if (fetchError) {
+                    console.error('Error fetching deals:', fetchError.message);
+                    setError(`Error: ${fetchError.message}`);
+                    return;
+                }
+                if (data && data.length > 0) {
+                    allData = allData.concat(data);
+                    from += PAGE_SIZE;
+                    hasMore = data.length === PAGE_SIZE;
+                } else {
+                    hasMore = false;
+                }
             }
 
-            const deals = (data as DealingEntry[]) || [];
+            const deals = (allData as DealingEntry[]) || [];
             console.log('Fetched deals:', deals);
 
             // Filter deals based on the same date range used by the picker

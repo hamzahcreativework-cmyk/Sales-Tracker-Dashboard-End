@@ -62,54 +62,74 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         setIsLoading(true);
         try {
             console.log('Fetching events for venue:', effectiveVenueName);
-            let query = supabase.from('deals').select('*');
-            if (effectiveVenueName) {
-                query = query.eq('namaVenue', effectiveVenueName);
+
+            const PAGE_SIZE = 1000;
+            let allData: any[] = [];
+            let from = 0;
+            let hasMore = true;
+
+            while (hasMore) {
+                let query = supabase.from('deals').select('*').range(from, from + PAGE_SIZE - 1);
+                if (effectiveVenueName) {
+                    query = query.eq('namaVenue', effectiveVenueName);
+                }
+                const { data, error: fetchError } = await query;
+                if (requestId !== fetchRequestIdRef.current) {
+                    return;
+                }
+                if (fetchError) {
+                    console.error('Error fetching deals for calendar:', fetchError.message);
+                    alert('Gagal memuat data event.');
+                    return;
+                }
+                if (data && data.length > 0) {
+                    allData = allData.concat(data);
+                    from += PAGE_SIZE;
+                    hasMore = data.length === PAGE_SIZE;
+                } else {
+                    hasMore = false;
+                }
             }
-            const { data, error } = await query;
+
             if (requestId !== fetchRequestIdRef.current) {
                 return;
             }
-            if (error) {
-                console.error('Error fetching deals for calendar:', error.message);
-                alert('Gagal memuat data event.');
-            } else {
-                const deals = data as DealingEntry[];
-                console.log('Fetched deals for calendar:', deals);
-                const mapBookingStatusToEventStatus = (bookingStatus: DealingEntry['jenisBooking']): EventStatus => {
-                    switch (bookingStatus) {
-                        case 'Lunas':
-                        case 'Booking':
-                            return 'Confirmed';
-                        case 'Waiting List':
-                            return 'Waiting List';
-                        case 'DP':
-                        case 'Soft Booking':
-                        default:
-                            return 'Tentative';
-                    }
-                };
-                const mappedEvents = deals.map(deal => ({
-                    id: deal.id,
-                    eventName: deal.namaClient,
-                    venueName: deal.namaVenue,
-                    venueLokasi: (deal as any).venueLokasi || undefined,
-                    marketingName: deal.namaMarketing,
-                    paxCount: deal.totalPax,
-                    waktuAcara: (deal as any).waktuAcara || undefined,
-                    eventType: deal.jenisAcara,
-                    weddingType: deal.weddingType,
-                    bookingDate: deal.tanggalBooking,
-                    eventDate: deal.tanggalAcara,
-                    sumberData: deal.sumberData,
-                    status: mapBookingStatusToEventStatus(deal.jenisBooking),
-                    jenisBooking: deal.jenisBooking,
-                    eventOrder: deal.eventOrder || 1, // Default order 1 jika tidak ada
-                    notes: `Pax: ${deal.namaPax}, Pelunasan: ${deal.tanggalPelunasan || 'N/A'}`
-                }));
-                console.log('Mapped events:', mappedEvents);
-                setEventsForGrid(mappedEvents);
-            }
+
+            const deals = allData as DealingEntry[];
+            console.log('Fetched deals for calendar:', deals);
+            const mapBookingStatusToEventStatus = (bookingStatus: DealingEntry['jenisBooking']): EventStatus => {
+                switch (bookingStatus) {
+                    case 'Lunas':
+                    case 'Booking':
+                        return 'Confirmed';
+                    case 'Waiting List':
+                        return 'Waiting List';
+                    case 'DP':
+                    case 'Soft Booking':
+                    default:
+                        return 'Tentative';
+                }
+            };
+            const mappedEvents = deals.map(deal => ({
+                id: deal.id,
+                eventName: deal.namaClient,
+                venueName: deal.namaVenue,
+                venueLokasi: (deal as any).venueLokasi || undefined,
+                marketingName: deal.namaMarketing,
+                paxCount: deal.totalPax,
+                waktuAcara: (deal as any).waktuAcara || undefined,
+                eventType: deal.jenisAcara,
+                weddingType: deal.weddingType,
+                bookingDate: deal.tanggalBooking,
+                eventDate: deal.tanggalAcara,
+                sumberData: deal.sumberData,
+                status: mapBookingStatusToEventStatus(deal.jenisBooking),
+                jenisBooking: deal.jenisBooking,
+                eventOrder: deal.eventOrder || 1,
+                notes: `Pax: ${deal.namaPax}, Pelunasan: ${deal.tanggalPelunasan || 'N/A'}`
+            }));
+            console.log('Mapped events:', mappedEvents);
+            setEventsForGrid(mappedEvents);
         } catch (err) {
             console.error('Unexpected error in fetchEvents:', err);
             alert('Terjadi kesalahan tak terduga saat memuat data event.');
@@ -366,6 +386,323 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         return { venues: venueResults, totalWeekends: weekends.length };
     }, [eventsForGrid, currentDate, VENUES]);
 
+    const handleExportCalendarPDF = () => {
+        const monthEvents = eventsForGrid.filter(event => {
+            const eventDate = dateUtils.parseLocalDate(event.eventDate);
+            return eventDate.getMonth() === currentDate.getMonth() &&
+                   eventDate.getFullYear() === currentDate.getFullYear();
+        });
+
+        const relevantEvents = effectiveVenueName
+            ? monthEvents.filter(e => e.venueName === effectiveVenueName)
+            : monthEvents;
+
+        if (relevantEvents.length === 0) {
+            alert('Tidak ada data event untuk di-export.');
+            return;
+        }
+
+        const weddingEvents = relevantEvents.filter(e => e.eventType === 'Wedding');
+        const miceEvents = relevantEvents.filter(e => e.eventType !== 'Wedding');
+
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const marginX = 14;
+        const monthYear = new Intl.DateTimeFormat('id-ID', { year: 'numeric', month: 'long' }).format(currentDate);
+        const now = new Date();
+        const timestamp = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            + '  |  ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+            + ' WIB';
+
+        const title = effectiveVenueName
+            ? `Laporan Event ${effectiveVenueName}`
+            : 'Laporan Event Semua Venue';
+
+        doc.setFontSize(15);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text(title, marginX, 18);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Periode: ${monthYear}`, marginX, 25);
+
+        doc.setDrawColor(30, 30, 30);
+        doc.setLineWidth(0.6);
+        doc.line(marginX, 29, pageWidth - marginX, 29);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Total Event: ${relevantEvents.length}  |  Wedding: ${weddingEvents.length}  |  MICE Event: ${miceEvents.length}`, marginX, 36);
+
+        let currentY = 41;
+
+        const buildTableRows = (events: typeof relevantEvents) => {
+            return events
+                .sort((a, b) => {
+                    const dateCompare = a.eventDate.localeCompare(b.eventDate);
+                    if (dateCompare !== 0) return dateCompare;
+                    return (a.eventOrder || 1) - (b.eventOrder || 1);
+                })
+                .map((event, idx) => {
+                    const eventDate = dateUtils.parseLocalDate(event.eventDate);
+                    const formattedDate = eventDate.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+                    const displayType = event.eventType === 'Wedding'
+                        ? (event.weddingType ? `Wedding - ${event.weddingType}` : 'Wedding')
+                        : 'MICE Event';
+                    return [
+                        String(idx + 1),
+                        formattedDate,
+                        event.eventName || '-',
+                        event.venueName || '-',
+                        displayType,
+                        event.waktuAcara || '-',
+                        event.paxCount > 0 ? String(event.paxCount) : '-',
+                        event.jenisBooking || '-',
+                        event.marketingName || '-',
+                    ];
+                });
+        };
+
+        const tableHead = [['No', 'Tanggal', 'Nama Client', 'Venue', 'Jenis', 'Waktu', 'Pax', 'Booking', 'Marketing']];
+        const tableStyles = {
+            theme: 'plain' as const,
+            styles: {
+                fontSize: 7.5,
+                cellPadding: 2.5,
+                textColor: [30, 30, 30] as [number, number, number],
+                lineColor: [180, 180, 180] as [number, number, number],
+                lineWidth: 0.2,
+            },
+            headStyles: {
+                fillColor: [240, 240, 240] as [number, number, number],
+                textColor: [30, 30, 30] as [number, number, number],
+                fontStyle: 'bold' as const,
+                fontSize: 8,
+                halign: 'center' as const,
+            },
+            alternateRowStyles: {
+                fillColor: [248, 248, 248] as [number, number, number],
+            },
+            columnStyles: {
+                0: { halign: 'center' as const, cellWidth: 10 },
+                5: { halign: 'center' as const },
+                6: { halign: 'center' as const, cellWidth: 14 },
+            },
+            tableLineColor: [180, 180, 180] as [number, number, number],
+            tableLineWidth: 0.2,
+            margin: { left: marginX, right: marginX },
+        };
+
+        if (weddingEvents.length > 0) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(219, 39, 119);
+            doc.text(`Wedding (${weddingEvents.length} event)`, marginX, currentY + 2);
+            currentY += 6;
+
+            autoTable(doc, {
+                head: tableHead,
+                body: buildTableRows(weddingEvents),
+                startY: currentY,
+                ...tableStyles,
+                headStyles: {
+                    ...tableStyles.headStyles,
+                    fillColor: [252, 231, 243] as [number, number, number],
+                    textColor: [157, 23, 77] as [number, number, number],
+                },
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (miceEvents.length > 0) {
+            if (currentY > doc.internal.pageSize.getHeight() - 60) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(79, 70, 229);
+            doc.text(`MICE Event (${miceEvents.length} event)`, marginX, currentY + 2);
+            currentY += 6;
+
+            autoTable(doc, {
+                head: tableHead,
+                body: buildTableRows(miceEvents),
+                startY: currentY,
+                ...tableStyles,
+                headStyles: {
+                    ...tableStyles.headStyles,
+                    fillColor: [224, 231, 255] as [number, number, number],
+                    textColor: [55, 48, 163] as [number, number, number],
+                },
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        // --- Perhitungan Event Section ---
+        if (currentY > doc.internal.pageSize.getHeight() - 80) {
+            doc.addPage();
+            currentY = 20;
+        }
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text('Perhitungan Event', marginX, currentY + 2);
+        currentY += 6;
+
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+        const dayLabels: Record<string, string> = { sunday: 'Minggu', monday: 'Senin', tuesday: 'Selasa', wednesday: 'Rabu', thursday: 'Kamis', friday: 'Jumat', saturday: 'Sabtu' };
+
+        const countByDay: Record<string, { pagi: number; malam: number; fullDay: number }> = {};
+        for (const d of dayNames) {
+            countByDay[d] = { pagi: 0, malam: 0, fullDay: 0 };
+        }
+
+        relevantEvents.forEach(event => {
+            const eventDate = dateUtils.parseLocalDate(event.eventDate);
+            const dayName = dayNames[eventDate.getDay()];
+            if (event.waktuAcara === 'Pagi') countByDay[dayName].pagi++;
+            else if (event.waktuAcara === 'Malam') countByDay[dayName].malam++;
+            else if (event.waktuAcara === 'Full Day') countByDay[dayName].fullDay++;
+        });
+
+        const countingRows = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+            const c = countByDay[day];
+            const total = c.pagi + c.malam + c.fullDay;
+            return [dayLabels[day], String(c.pagi), String(c.malam), String(c.fullDay), String(total)];
+        });
+
+        const totalPagi = Object.values(countByDay).reduce((s, c) => s + c.pagi, 0);
+        const totalMalam = Object.values(countByDay).reduce((s, c) => s + c.malam, 0);
+        const totalFullDay = Object.values(countByDay).reduce((s, c) => s + c.fullDay, 0);
+        countingRows.push(['Total', String(totalPagi), String(totalMalam), String(totalFullDay), String(totalPagi + totalMalam + totalFullDay)]);
+
+        autoTable(doc, {
+            head: [['Hari', 'Pagi', 'Malam', 'Full Day', 'Total']],
+            body: countingRows,
+            startY: currentY,
+            theme: 'plain',
+            styles: {
+                fontSize: 8,
+                cellPadding: 2.5,
+                textColor: [30, 30, 30],
+                lineColor: [180, 180, 180],
+                lineWidth: 0.2,
+            },
+            headStyles: {
+                fillColor: [240, 240, 240],
+                textColor: [30, 30, 30],
+                fontStyle: 'bold',
+                fontSize: 8,
+                halign: 'center',
+            },
+            bodyStyles: {
+                halign: 'center',
+            },
+            alternateRowStyles: {
+                fillColor: [248, 248, 248],
+            },
+            columnStyles: {
+                0: { halign: 'left' },
+            },
+            tableLineColor: [180, 180, 180],
+            tableLineWidth: 0.2,
+            margin: { left: marginX, right: marginX },
+            didParseCell: (data: any) => {
+                if (data.section === 'body' && data.row.index === countingRows.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [230, 230, 230];
+                }
+            },
+        });
+
+        // --- Venue Summary ---
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+
+        if (currentY > doc.internal.pageSize.getHeight() - 60) {
+            doc.addPage();
+            currentY = 20;
+        }
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 30);
+        doc.text('Ringkasan per Venue', marginX, currentY + 2);
+        currentY += 6;
+
+        const venueMap: Record<string, { wedding: number; mice: number; total: number }> = {};
+        relevantEvents.forEach(event => {
+            const vName = event.venueName || 'Lainnya';
+            if (!venueMap[vName]) venueMap[vName] = { wedding: 0, mice: 0, total: 0 };
+            if (event.eventType === 'Wedding') venueMap[vName].wedding++;
+            else venueMap[vName].mice++;
+            venueMap[vName].total++;
+        });
+
+        const venueSummaryRows = Object.entries(venueMap)
+            .sort((a, b) => b[1].total - a[1].total)
+            .map(([name, counts], idx) => [
+                String(idx + 1), name, String(counts.wedding), String(counts.mice), String(counts.total),
+            ]);
+
+        autoTable(doc, {
+            head: [['No', 'Venue', 'Wedding', 'MICE Event', 'Total']],
+            body: venueSummaryRows,
+            startY: currentY,
+            theme: 'plain',
+            styles: {
+                fontSize: 8,
+                cellPadding: 2.5,
+                textColor: [30, 30, 30],
+                lineColor: [180, 180, 180],
+                lineWidth: 0.2,
+            },
+            headStyles: {
+                fillColor: [240, 240, 240],
+                textColor: [30, 30, 30],
+                fontStyle: 'bold',
+                fontSize: 8,
+                halign: 'center',
+            },
+            alternateRowStyles: {
+                fillColor: [248, 248, 248],
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                2: { halign: 'center' },
+                3: { halign: 'center' },
+                4: { halign: 'center' },
+            },
+            tableLineColor: [180, 180, 180],
+            tableLineWidth: 0.2,
+            margin: { left: marginX, right: marginX },
+        });
+
+        // --- Footer on every page ---
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const pageHeight = doc.internal.pageSize.getHeight();
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.3);
+            doc.line(marginX, pageHeight - 16, pageWidth - marginX, pageHeight - 16);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(130, 130, 130);
+            doc.text(`Dicetak: ${timestamp}`, marginX, pageHeight - 10);
+            doc.text(`Halaman ${i} dari ${pageCount}`, pageWidth - marginX, pageHeight - 10, { align: 'right' });
+        }
+
+        doc.save(`laporan-event-${monthYear.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+    };
+
     const handleExportWeekendWarningsPDF = () => {
         const displayedWarnings = effectiveVenueName
             ? venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
@@ -569,10 +906,16 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                 <ListIcon className="w-5 h-5" />
                             </ViewSwitcherButton>
                         </div>
+                        <button
+                            onClick={handleExportCalendarPDF}
+                            className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold text-[var(--color-text-secondary)] bg-[var(--color-interactive)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-interactive-hover)] transition-colors"
+                        >
+                            <PdfIcon className="w-4 h-4" />
+                            <span className="hidden sm:inline">Export PDF</span>
+                        </button>
                         {(userRole === 'Admin' || userRole === 'Manager') && (
-                            <button 
+                            <button
                                 onClick={() => {
-                                    // Default to the first day of the currently viewed month
                                     setSelectedDate(dateUtils.toLocalDateString(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)));
                                     setIsAddEventModalOpen(true);
                                 }}

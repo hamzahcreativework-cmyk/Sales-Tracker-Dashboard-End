@@ -1480,9 +1480,22 @@ const CricketBoardCalendar: React.FC = () => {
 
     // Fetch all deals
     const fetchEvents = useCallback(async () => {
-        const { data, error } = await supabase.from('deals').select('*');
-        if (error) { console.error('CricketBoardCalendar fetch error:', error); return; }
-        setDeals((data as DealingEntry[]) || []);
+        const PAGE_SIZE = 1000;
+        let allData: any[] = [];
+        let from = 0;
+        let hasMore = true;
+        while (hasMore) {
+            const { data, error } = await supabase.from('deals').select('*').range(from, from + PAGE_SIZE - 1);
+            if (error) { console.error('CricketBoardCalendar fetch error:', error); return; }
+            if (data && data.length > 0) {
+                allData = allData.concat(data);
+                from += PAGE_SIZE;
+                hasMore = data.length === PAGE_SIZE;
+            } else {
+                hasMore = false;
+            }
+        }
+        setDeals((allData as DealingEntry[]) || []);
         setLoading(false);
         // Trigger flash
         setFlash(true);

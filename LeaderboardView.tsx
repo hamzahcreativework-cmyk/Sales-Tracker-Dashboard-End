@@ -13,6 +13,7 @@ interface RankedEntry {
     name: string;
     eventCount: number;
     totalPax: number;
+    avatarUrl?: string;
 }
 
 const MEDAL_COLORS = {
@@ -137,7 +138,7 @@ const PodiumItem: React.FC<{
             )}
             {/* Avatar circle */}
             <div
-                className="flex items-center justify-center rounded-full mb-2 font-bold text-lg transition-transform duration-300 hover:scale-110"
+                className="flex items-center justify-center rounded-full mb-2 font-bold text-lg transition-transform duration-300 hover:scale-110 overflow-hidden"
                 style={{
                     width: isCenter ? 64 : 52,
                     height: isCenter ? 64 : 52,
@@ -147,7 +148,11 @@ const PodiumItem: React.FC<{
                     fontSize: isCenter ? 22 : 18,
                 }}
             >
-                {entry.name.charAt(0).toUpperCase()}
+                {entry.avatarUrl ? (
+                    <img src={entry.avatarUrl} alt={entry.name} className="w-full h-full object-cover" />
+                ) : (
+                    entry.name.charAt(0).toUpperCase()
+                )}
             </div>
             {/* Name */}
             <p
@@ -221,6 +226,15 @@ const LeaderboardRow: React.FC<{
             ) : (
                 <RankBadge rank={rank} />
             )}
+
+            {/* Avatar */}
+            <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: isTop3 ? MEDAL_COLORS[rank as keyof typeof MEDAL_COLORS].bg + '30' : 'var(--color-interactive)' }}>
+                {entry.avatarUrl ? (
+                    <img src={entry.avatarUrl} alt={entry.name} className="w-full h-full object-cover" />
+                ) : (
+                    <span className="text-xs font-bold" style={{ color: 'var(--color-text-secondary)' }}>{entry.name.charAt(0).toUpperCase()}</span>
+                )}
+            </div>
 
             {/* Name */}
             <div className="flex-1 min-w-0">
@@ -416,30 +430,47 @@ const LeaderboardView: React.FC<LeaderboardViewProps> = ({ userRole, assignedVen
     const [selectedVenue, setSelectedVenue] = useState<string>('');
     const [selectedBookingStatus, setSelectedBookingStatus] = useState<string>('');
 
+    const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
+
     // Fetch all deals from Supabase
     useEffect(() => {
         const fetchDeals = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                let query = supabase
-                    .from('deals')
-                    .select('namaMarketing, namaVenue, tanggalAcara, jenisBooking, jenisAcara, totalPax');
+                const PAGE_SIZE = 1000;
+                let allData: any[] = [];
+                let from = 0;
+                let hasMore = true;
 
-                // If user is restricted to a specific venue, filter at DB level
-                if (userRole === 'User' && assignedVenue) {
-                    query = query.eq('namaVenue', assignedVenue);
+                while (hasMore) {
+                    let query = supabase
+                        .from('deals')
+                        .select('namaMarketing, namaVenue, tanggalAcara, jenisBooking, jenisAcara, totalPax')
+                        .range(from, from + PAGE_SIZE - 1);
+
+                    if (userRole === 'User' && assignedVenue) {
+                        query = query.eq('namaVenue', assignedVenue);
+                    }
+
+                    const { data, error: fetchError } = await query;
+
+                    if (fetchError) {
+                        console.error('Error fetching deals for leaderboard:', fetchError.message);
+                        setError('Gagal memuat data. Silakan coba lagi nanti.');
+                        setAllDeals([]);
+                        return;
+                    }
+                    if (data && data.length > 0) {
+                        allData = allData.concat(data);
+                        from += PAGE_SIZE;
+                        hasMore = data.length === PAGE_SIZE;
+                    } else {
+                        hasMore = false;
+                    }
                 }
 
-                const { data, error: fetchError } = await query;
-
-                if (fetchError) {
-                    console.error('Error fetching deals for leaderboard:', fetchError.message);
-                    setError('Gagal memuat data. Silakan coba lagi nanti.');
-                    setAllDeals([]);
-                } else {
-                    setAllDeals((data as DealingEntry[]) || []);
-                }
+                setAllDeals((allData as DealingEntry[]) || []);
             } catch (err) {
                 console.error('Unexpected error in LeaderboardView:', err);
                 setError('Terjadi kesalahan tak terduga saat memuat data.');
@@ -451,6 +482,28 @@ const LeaderboardView: React.FC<LeaderboardViewProps> = ({ userRole, assignedVen
 
         fetchDeals();
     }, [userRole, assignedVenue]);
+
+    // Fetch user avatars
+    useEffect(() => {
+        const fetchAvatars = async () => {
+            try {
+                const { data, error } = await supabase.functions.invoke('list-users');
+                if (error || !data?.users) return;
+                const map: Record<string, string> = {};
+                data.users.forEach((u: any) => {
+                    const name = u.user_metadata?.full_name?.trim();
+                    const avatar = u.user_metadata?.avatar_url;
+                    if (name && avatar) {
+                        map[name] = avatar;
+                    }
+                });
+                setAvatarMap(map);
+            } catch {
+                // Silently fail — fallback initials will be used
+            }
+        };
+        fetchAvatars();
+    }, []);
 
     // Filter deals by year/month/venue/bookingStatus client-side
     const filteredDeals = useMemo(() => {
@@ -479,9 +532,9 @@ const LeaderboardView: React.FC<LeaderboardViewProps> = ({ userRole, assignedVen
             });
         });
         return Array.from(map.entries())
-            .map(([name, stats]) => ({ name, ...stats }))
+            .map(([name, stats]) => ({ name, ...stats, avatarUrl: avatarMap[name] }))
             .sort((a, b) => b.eventCount - a.eventCount || b.totalPax - a.totalPax);
-    }, [filteredDeals]);
+    }, [filteredDeals, avatarMap]);
 
     // Compute Sales Non Wedding leaderboard (grouped by namaMarketing, Non Wedding only)
     const salesNonWeddingLeaderboard = useMemo((): RankedEntry[] => {
@@ -497,9 +550,9 @@ const LeaderboardView: React.FC<LeaderboardViewProps> = ({ userRole, assignedVen
             });
         });
         return Array.from(map.entries())
-            .map(([name, stats]) => ({ name, ...stats }))
+            .map(([name, stats]) => ({ name, ...stats, avatarUrl: avatarMap[name] }))
             .sort((a, b) => b.eventCount - a.eventCount || b.totalPax - a.totalPax);
-    }, [filteredDeals]);
+    }, [filteredDeals, avatarMap]);
 
     // Compute Venue leaderboard (grouped by namaVenue)
     const venueLeaderboard = useMemo((): RankedEntry[] => {
