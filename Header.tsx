@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { BellIcon, SearchIcon, InfoIcon, SuccessIcon, WarningIcon, ErrorIcon, UserCircleIcon, LogoutIcon } from './Icons';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { BellIcon, SearchIcon, InfoIcon, SuccessIcon, WarningIcon, ErrorIcon, UserCircleIcon, LogoutIcon, DashboardIcon, TasksIcon, AnalyticsIcon, CalendarIcon, TeamIcon, SettingsIcon, ListIcon } from './Icons';
 import { supabase } from './supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import Notification from './Notification';
@@ -7,6 +7,261 @@ import { NotificationItem } from './types';
 import { ActiveView } from './App';
 // Start with an empty notifications list; we'll populate from DB and realtime updates
 const initialNotifications: NotificationItem[] = [];
+
+interface SearchResult {
+    id: string;
+    category: 'navigation' | 'deals' | 'marketing';
+    title: string;
+    subtitle: string;
+    icon: React.ReactNode;
+    action: () => void;
+}
+
+const NAV_ITEMS: { label: string; view: ActiveView; icon: React.ReactNode; keywords: string[] }[] = [
+    { label: 'Dashboard', view: { type: 'Dashboard' }, icon: <DashboardIcon className="w-4 h-4" />, keywords: ['dashboard', 'beranda', 'home', 'utama'] },
+    { label: 'Data Dealing', view: { type: 'DataDealing' }, icon: <TasksIcon className="w-4 h-4" />, keywords: ['data', 'dealing', 'deal', 'transaksi'] },
+    { label: 'Grafik', view: { type: 'Grafik' }, icon: <AnalyticsIcon className="w-4 h-4" />, keywords: ['grafik', 'chart', 'graph', 'analitik', 'analytics', 'statistik'] },
+    { label: 'Calendar Event Venue', view: { type: 'CalendarEvent' }, icon: <CalendarIcon className="w-4 h-4" />, keywords: ['calendar', 'kalender', 'event', 'acara', 'venue', 'jadwal'] },
+    { label: 'Perhitungan Event', view: { type: 'EventCounting' }, icon: <TasksIcon className="w-4 h-4" />, keywords: ['perhitungan', 'event', 'counting', 'hitung', 'jumlah'] },
+    { label: 'Leaderboard', view: { type: 'Leaderboard' }, icon: <AnalyticsIcon className="w-4 h-4" />, keywords: ['leaderboard', 'ranking', 'peringkat', 'top'] },
+    { label: 'Daily Report', view: { type: 'Marketing' }, icon: <BellIcon className="w-4 h-4" />, keywords: ['daily', 'report', 'laporan', 'harian', 'marketing'] },
+    { label: 'Laporan Data Bitrix24', view: { type: 'LaporanBitrix' }, icon: <ListIcon className="w-4 h-4" />, keywords: ['laporan', 'bitrix', 'bitrix24', 'data'] },
+    { label: 'Data User', view: { type: 'DataUser' }, icon: <TeamIcon className="w-4 h-4" />, keywords: ['user', 'pengguna', 'manajemen', 'management', 'admin'] },
+    { label: 'Pengaturan Situs', view: { type: 'SiteSettings' }, icon: <SettingsIcon className="w-4 h-4" />, keywords: ['pengaturan', 'settings', 'situs', 'site', 'konfigurasi'] },
+    { label: 'Profile', view: { type: 'Profile' }, icon: <UserCircleIcon className="w-4 h-4" />, keywords: ['profile', 'profil', 'akun', 'account'] },
+];
+
+const CommandPalette: React.FC<{ isOpen: boolean; onClose: () => void; setActiveView: (view: ActiveView) => void }> = ({ isOpen, onClose, setActiveView }) => {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<SearchResult[]>([]);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [isSearching, setIsSearching] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const resultsRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+    useEffect(() => {
+        if (isOpen) {
+            setQuery('');
+            setResults([]);
+            setActiveIndex(0);
+            setTimeout(() => inputRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
+
+    const searchNavigation = useCallback((q: string): SearchResult[] => {
+        const lower = q.toLowerCase();
+        return NAV_ITEMS
+            .filter(item => item.label.toLowerCase().includes(lower) || item.keywords.some(k => k.includes(lower)))
+            .map(item => ({
+                id: `nav-${item.label}`,
+                category: 'navigation' as const,
+                title: item.label,
+                subtitle: 'Navigasi',
+                icon: item.icon,
+                action: () => { setActiveView(item.view); onClose(); },
+            }));
+    }, [setActiveView, onClose]);
+
+    const searchDatabase = useCallback(async (q: string) => {
+        if (q.length < 2) return;
+        setIsSearching(true);
+        try {
+            const [dealsRes, marketingRes] = await Promise.all([
+                supabase.from('deals')
+                    .select('id, namaClient, namaVenue, namaMarketing, jenisAcara, jenisBooking, tanggalAcara')
+                    .or(`namaClient.ilike.%${q}%,namaVenue.ilike.%${q}%,namaMarketing.ilike.%${q}%,namaPax.ilike.%${q}%,sumberData.ilike.%${q}%`)
+                    .order('tanggalAcara', { ascending: false })
+                    .limit(8),
+                supabase.from('marketing_staff')
+                    .select('id, name, venueName, role')
+                    .or(`name.ilike.%${q}%,venueName.ilike.%${q}%`)
+                    .limit(5),
+            ]);
+
+            const dbResults: SearchResult[] = [];
+
+            if (dealsRes.data) {
+                for (const deal of dealsRes.data) {
+                    dbResults.push({
+                        id: `deal-${deal.id}`,
+                        category: 'deals',
+                        title: deal.namaClient || 'Unknown Client',
+                        subtitle: `${deal.namaVenue} · ${deal.namaMarketing} · ${deal.jenisAcara} · ${deal.jenisBooking} · ${deal.tanggalAcara}`,
+                        icon: <CalendarIcon className="w-4 h-4" />,
+                        action: () => { setActiveView({ type: 'CalendarEvent', selectedEventId: deal.id }); onClose(); },
+                    });
+                }
+            }
+
+            if (marketingRes.data) {
+                for (const staff of marketingRes.data) {
+                    dbResults.push({
+                        id: `staff-${staff.id}`,
+                        category: 'marketing',
+                        title: staff.name,
+                        subtitle: `${staff.venueName} · ${staff.role || 'Marketing'}`,
+                        icon: <TeamIcon className="w-4 h-4" />,
+                        action: () => { setActiveView({ type: 'VenueDetail', venueName: staff.venueName }); onClose(); },
+                    });
+                }
+            }
+
+            setResults(prev => {
+                const navResults = prev.filter(r => r.category === 'navigation');
+                return [...navResults, ...dbResults];
+            });
+        } catch (err) {
+            console.error('Search error:', err);
+        } finally {
+            setIsSearching(false);
+        }
+    }, [setActiveView, onClose]);
+
+    useEffect(() => {
+        if (!query.trim()) {
+            setResults([]);
+            setActiveIndex(0);
+            return;
+        }
+
+        const navResults = searchNavigation(query);
+        setResults(navResults);
+        setActiveIndex(0);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => searchDatabase(query), 300);
+
+        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    }, [query, searchNavigation, searchDatabase]);
+
+    useEffect(() => {
+        const el = resultsRef.current;
+        if (!el) return;
+        const active = el.querySelector(`[data-index="${activeIndex}"]`) as HTMLElement;
+        if (active) active.scrollIntoView({ block: 'nearest' });
+    }, [activeIndex]);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiveIndex(i => Math.min(i + 1, results.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiveIndex(i => Math.max(i - 1, 0));
+        } else if (e.key === 'Enter' && results[activeIndex]) {
+            e.preventDefault();
+            results[activeIndex].action();
+        } else if (e.key === 'Escape') {
+            onClose();
+        }
+    };
+
+    if (!isOpen) return null;
+
+    const grouped = {
+        navigation: results.filter(r => r.category === 'navigation'),
+        deals: results.filter(r => r.category === 'deals'),
+        marketing: results.filter(r => r.category === 'marketing'),
+    };
+
+    let flatIndex = 0;
+
+    const categoryLabels: Record<string, string> = {
+        navigation: 'Navigasi',
+        deals: 'Data Dealing',
+        marketing: 'Marketing Staff',
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={onClose}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div
+                className="relative w-full max-w-lg bg-[var(--color-surface)] rounded-xl shadow-2xl border border-[var(--color-border)] overflow-hidden"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center px-4 border-b border-[var(--color-border)]">
+                    <SearchIcon className="w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0" />
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Cari halaman, client, venue, marketing..."
+                        className="flex-1 px-3 py-3.5 text-sm bg-transparent text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none font-[Inter,sans-serif]"
+                    />
+                    <kbd className="hidden sm:inline-flex items-center text-xs text-[var(--color-text-secondary)] bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1.5 py-0.5 font-[Inter,sans-serif]">
+                        ESC
+                    </kbd>
+                </div>
+
+                <div ref={resultsRef} className="max-h-[50vh] overflow-y-auto">
+                    {!query.trim() ? (
+                        <div className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+                            Ketik untuk mencari halaman, data dealing, atau marketing...
+                        </div>
+                    ) : results.length === 0 && !isSearching ? (
+                        <div className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+                            Tidak ada hasil untuk "<span className="font-medium text-[var(--color-text-primary)]">{query}</span>"
+                        </div>
+                    ) : (
+                        <div className="py-2">
+                            {(['navigation', 'deals', 'marketing'] as const).map(cat => {
+                                const items = grouped[cat];
+                                if (items.length === 0) return null;
+                                return (
+                                    <div key={cat}>
+                                        <div className="px-4 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
+                                            {categoryLabels[cat]}
+                                        </div>
+                                        {items.map(item => {
+                                            const idx = flatIndex++;
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    data-index={idx}
+                                                    onClick={item.action}
+                                                    onMouseEnter={() => setActiveIndex(idx)}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${idx === activeIndex ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-interactive)]'}`}
+                                                >
+                                                    <span className={`flex-shrink-0 ${idx === activeIndex ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
+                                                        {item.icon}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">{item.title}</p>
+                                                        <p className="text-xs text-[var(--color-text-secondary)] truncate">{item.subtitle}</p>
+                                                    </div>
+                                                    {idx === activeIndex && (
+                                                        <span className="text-xs text-[var(--color-text-secondary)] flex-shrink-0">Enter ↵</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                            {isSearching && (
+                                <div className="flex items-center justify-center gap-2 py-3 text-sm text-[var(--color-text-secondary)]">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-[var(--color-primary)] border-t-transparent" />
+                                    Mencari...
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="px-4 py-2 border-t border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
+                    <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1"><kbd className="bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1 py-0.5">↑↓</kbd> navigasi</span>
+                        <span className="flex items-center gap-1"><kbd className="bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1 py-0.5">↵</kbd> pilih</span>
+                    </div>
+                    <span className="flex items-center gap-1"><kbd className="bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1 py-0.5">esc</kbd> tutup</span>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 let resend: any = null;
 try {
@@ -27,6 +282,7 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
     const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const notificationsRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
     const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
@@ -42,6 +298,17 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
     }, [theme]);
 
     const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
+    useEffect(() => {
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsSearchOpen(prev => !prev);
+            }
+        };
+        document.addEventListener('keydown', handleGlobalKeyDown);
+        return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+    }, []);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -393,21 +660,21 @@ const Header: React.FC<HeaderProps> = ({ setActiveView, onLogout }) => {
 
     return (
         <header className="flex items-center justify-between py-4 mb-4">
-            {/* Search bar - decorative */}
+            {/* Search bar trigger */}
             <div className="flex items-center gap-2 flex-1 max-w-sm">
-                <div className="relative flex items-center w-full">
+                <button
+                    onClick={() => setIsSearchOpen(true)}
+                    className="relative flex items-center w-full pl-9 pr-14 py-2 text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-interactive)] transition-colors cursor-pointer font-[Inter,sans-serif] text-left"
+                >
                     <SearchIcon className="absolute left-3 w-4 h-4 text-[var(--color-text-secondary)] pointer-events-none" />
-                    <input
-                        type="text"
-                        placeholder="Search everything"
-                        readOnly
-                        className="w-full pl-9 pr-14 py-2 text-sm bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-secondary)] placeholder-gray-400 focus:outline-none cursor-default font-[Inter,sans-serif]"
-                    />
+                    <span className="text-gray-400">Cari halaman, client, venue...</span>
                     <span className="absolute right-3 flex items-center gap-0.5 text-xs text-[var(--color-text-secondary)] bg-[var(--color-interactive)] border border-[var(--color-border)] rounded px-1.5 py-0.5 select-none font-[Inter,sans-serif]">
-                        ⌘K
+                        Ctrl+K
                     </span>
-                </div>
+                </button>
             </div>
+
+            <CommandPalette isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} setActiveView={setActiveView} />
 
             {/* Right side controls */}
             <div className="flex items-center gap-3">

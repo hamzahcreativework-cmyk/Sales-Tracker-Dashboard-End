@@ -44,6 +44,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
     const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | ''>('');
+    const [waktuAcaraFilter, setWaktuAcaraFilter] = useState<string>('');
     const [selectedWeek, setSelectedWeek] = useState<number | ''>('');
     const [selectedVenuePopup, setSelectedVenuePopup] = useState<string | null>(null);
     const fetchRequestIdRef = useRef(0);
@@ -185,6 +186,11 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             filtered = filtered.filter(event => event.jenisBooking === bookingStatusFilter);
         }
 
+        // Apply waktu acara filter
+        if (waktuAcaraFilter) {
+            filtered = filtered.filter(event => event.waktuAcara === waktuAcaraFilter);
+        }
+
         // Apply week filter (only for agenda view)
         if (selectedWeek && viewMode === 'agenda') {
             filtered = filtered.filter(event => {
@@ -194,7 +200,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         }
 
         return filtered;
-    }, [eventsForGrid, bookingStatusFilter, selectedWeek, viewMode, currentDate]);
+    }, [eventsForGrid, bookingStatusFilter, waktuAcaraFilter, selectedWeek, viewMode, currentDate]);
 
 
     const handleAddEvent = async (newDealData: Omit<DealingEntry, 'id'>) => {
@@ -951,9 +957,46 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                     <div className="flex items-baseline gap-3 mt-4">
                         <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Waktu Acara:</h3>
                         <div className="flex flex-wrap gap-2">
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 border border-amber-300">🌅 Pagi: {monthlyStats.waktuPagi}</span>
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-white border border-slate-700">🌙 Malam: {monthlyStats.waktuMalam}</span>
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">☀️ Full Day: {monthlyStats.waktuFullDay}</span>
+                            <button
+                                onClick={() => setWaktuAcaraFilter(waktuAcaraFilter === '' ? '' : '')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 border cursor-pointer ${
+                                    waktuAcaraFilter === ''
+                                        ? 'bg-[var(--color-primary)] text-white border-transparent shadow-md'
+                                        : 'bg-transparent text-[var(--color-text-secondary)] border-[var(--color-border)] hover:bg-[var(--color-interactive)] hover:border-[var(--color-interactive-hover)]'
+                                }`}
+                            >
+                                Semua
+                            </button>
+                            <button
+                                onClick={() => setWaktuAcaraFilter(waktuAcaraFilter === 'Pagi' ? '' : 'Pagi')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 border cursor-pointer ${
+                                    waktuAcaraFilter === 'Pagi'
+                                        ? 'bg-amber-500 text-white border-transparent shadow-md'
+                                        : 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200'
+                                }`}
+                            >
+                                🌅 Pagi: {monthlyStats.waktuPagi}
+                            </button>
+                            <button
+                                onClick={() => setWaktuAcaraFilter(waktuAcaraFilter === 'Malam' ? '' : 'Malam')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 border cursor-pointer ${
+                                    waktuAcaraFilter === 'Malam'
+                                        ? 'bg-slate-900 text-white border-transparent shadow-md'
+                                        : 'bg-slate-800 text-white border-slate-700 hover:bg-slate-700'
+                                }`}
+                            >
+                                🌙 Malam: {monthlyStats.waktuMalam}
+                            </button>
+                            <button
+                                onClick={() => setWaktuAcaraFilter(waktuAcaraFilter === 'Full Day' ? '' : 'Full Day')}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-all duration-200 border cursor-pointer ${
+                                    waktuAcaraFilter === 'Full Day'
+                                        ? 'bg-emerald-500 text-white border-transparent shadow-md'
+                                        : 'bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200'
+                                }`}
+                            >
+                                ☀️ Full Day: {monthlyStats.waktuFullDay}
+                            </button>
                         </div>
                     </div>
 
