@@ -11,6 +11,7 @@ import AgendaView from './AgendaView';
 import { dateUtils } from './dateUtils';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { VENUE_GROUPS, resolveVenueFilter } from './constants';
 
 interface CalendarEventViewProps {
     userRole: UserRole;
@@ -54,15 +55,21 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
 
     console.log('assignedVenue:', assignedVenue, 'venueName:', venueName, 'effectiveVenueName:', effectiveVenueName);
 
+    const groupedVenueNames = new Set(Object.values(VENUE_GROUPS).flatMap(g => g.venues));
     const displayedVenues = assignedVenue ? VENUES.filter(v => v.name === assignedVenue) : VENUES;
+    const ungroupedVenues = displayedVenues.filter(v => !groupedVenueNames.has(v.name));
     const isVenueDropdownDisabled = !!assignedVenue;
     const defaultVenueValue = assignedVenue || venueName || '';
+
+    const resolvedVenues = effectiveVenueName ? resolveVenueFilter(effectiveVenueName) : null;
+    const isGroupFilter = resolvedVenues !== null;
+    const effectiveSingleVenue = !isGroupFilter ? effectiveVenueName : null;
 
     const fetchEvents = async () => {
         const requestId = ++fetchRequestIdRef.current;
         setIsLoading(true);
         try {
-            console.log('Fetching events for venue:', effectiveVenueName);
+            console.log('Fetching events for venue:', effectiveVenueName, 'resolved:', resolvedVenues);
 
             const PAGE_SIZE = 1000;
             let allData: any[] = [];
@@ -71,8 +78,10 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
 
             while (hasMore) {
                 let query = supabase.from('deals').select('*').range(from, from + PAGE_SIZE - 1);
-                if (effectiveVenueName) {
-                    query = query.eq('namaVenue', effectiveVenueName);
+                if (isGroupFilter && resolvedVenues) {
+                    query = query.in('namaVenue', resolvedVenues);
+                } else if (effectiveSingleVenue) {
+                    query = query.eq('namaVenue', effectiveSingleVenue);
                 }
                 const { data, error: fetchError } = await query;
                 if (requestId !== fetchRequestIdRef.current) {
@@ -400,7 +409,9 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
         });
 
         const relevantEvents = effectiveVenueName
-            ? monthEvents.filter(e => e.venueName === effectiveVenueName)
+            ? isGroupFilter && resolvedVenues
+                ? monthEvents.filter(e => resolvedVenues.includes(e.venueName))
+                : monthEvents.filter(e => e.venueName === effectiveVenueName)
             : monthEvents;
 
         if (relevantEvents.length === 0) {
@@ -420,8 +431,9 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             + '  |  ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
             + ' WIB';
 
+        const displayLabel = isGroupFilter ? VENUE_GROUPS[effectiveVenueName]?.label : effectiveVenueName;
         const title = effectiveVenueName
-            ? `Laporan Event ${effectiveVenueName}`
+            ? `Laporan Event ${displayLabel}`
             : 'Laporan Event Semua Venue';
 
         doc.setFontSize(15);
@@ -711,7 +723,9 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
 
     const handleExportWeekendWarningsPDF = () => {
         const displayedWarnings = effectiveVenueName
-            ? venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
+            ? isGroupFilter && resolvedVenues
+                ? venueWeekendWarnings.venues.filter(v => resolvedVenues.includes(v.venueName))
+                : venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
             : venueWeekendWarnings.venues;
 
         if (displayedWarnings.length === 0) {
@@ -729,8 +743,9 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
             + '  |  ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
             + ' WIB';
 
+        const weekendDisplayLabel = isGroupFilter ? VENUE_GROUPS[effectiveVenueName]?.label : effectiveVenueName;
         const title = effectiveVenueName
-            ? `Target Weekend ${effectiveVenueName} Belum Tercapai`
+            ? `Target Weekend ${weekendDisplayLabel} Belum Tercapai`
             : 'Target Weekend Venue Belum Tercapai';
 
         // --- Header ---
@@ -886,7 +901,17 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                             aria-label="Filter berdasarkan venue"
                         >
                             {!assignedVenue && <option value="">Semua Venue</option>}
-                            {displayedVenues.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+                            {!assignedVenue && Object.keys(VENUE_GROUPS).length > 0 && (
+                                <optgroup label="Gabungan Brand">
+                                    {Object.entries(VENUE_GROUPS).map(([key, group]) => (
+                                        <option key={key} value={key}>{group.label}</option>
+                                    ))}
+                                </optgroup>
+                            )}
+                            {!assignedVenue && ungroupedVenues.length > 0 && <optgroup label="Venue Individual">
+                                {ungroupedVenues.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+                            </optgroup>}
+                            {assignedVenue && displayedVenues.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
                         </select>
                        
                     </div>
@@ -1033,7 +1058,24 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                     </div>
                     {!effectiveVenueName && VENUES.length > 0 && (
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                            {VENUES.map(v => {
+                            {Object.entries(VENUE_GROUPS).map(([key, group]) => {
+                                const groupCount = group.venues.reduce((sum, vn) => sum + (venueEventCounts[vn] || 0), 0);
+                                const groupColor = getVenueColor(key);
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setActiveView({ type: 'CalendarEvent', venueName: key })}
+                                        className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] px-2.5 py-1.5 rounded-lg border border-violet-300 bg-violet-50 hover:bg-violet-100 hover:border-violet-400 transition-all duration-200 cursor-pointer group"
+                                    >
+                                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform" style={{ backgroundColor: groupColor }}></span>
+                                        <span className="group-hover:text-[var(--color-text-primary)] transition-colors font-semibold">{group.label}</span>
+                                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold min-w-[18px] text-center transition-transform group-hover:scale-110" style={{ backgroundColor: groupColor, color: 'white' }}>
+                                            {groupCount}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                            {ungroupedVenues.map(v => {
                                 const count = venueEventCounts[v.name] || 0;
                                 const venueColor = getVenueColor(v.name);
                                 return (
@@ -1060,11 +1102,14 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
 
                 {(() => {
                     const displayedWarnings = effectiveVenueName
-                        ? venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
+                        ? isGroupFilter && resolvedVenues
+                            ? venueWeekendWarnings.venues.filter(v => resolvedVenues.includes(v.venueName))
+                            : venueWeekendWarnings.venues.filter(v => v.venueName === effectiveVenueName)
                         : venueWeekendWarnings.venues;
                     if (displayedWarnings.length === 0) return null;
                     const isAllVenues = !effectiveVenueName;
-                    const totalVenueCount = isAllVenues ? VENUES.length : 1;
+                    const totalVenueCount = isAllVenues ? VENUES.length : isGroupFilter ? resolvedVenues!.length : 1;
+                    const warningLabel = isGroupFilter ? VENUE_GROUPS[effectiveVenueName]?.label : effectiveVenueName;
                     return (
                         <div className="mb-4 p-4 rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600">
                             <div className="flex items-start gap-3">
@@ -1074,7 +1119,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                         <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm">
                                             {isAllVenues
                                                 ? 'Target Weekend Venue Belum Tercapai'
-                                                : `Target Weekend ${effectiveVenueName} Belum Tercapai`}
+                                                : `Target Weekend ${warningLabel} Belum Tercapai`}
                                         </h3>
                                         <button
                                             onClick={handleExportWeekendWarningsPDF}
@@ -1087,7 +1132,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                     <p className="text-xs text-amber-700 dark:text-amber-400 mb-3">
                                         {isAllVenues
                                             ? 'Setiap venue harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.'
-                                            : `${effectiveVenueName} harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.`}
+                                            : `${warningLabel} harus memiliki minimal 1 event di hari Sabtu dan 1 event di hari Minggu setiap weekend.`}
                                     </p>
                                     <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                                         {displayedWarnings.map(v => {
@@ -1131,12 +1176,12 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                     </div>
                                     <div className="mt-3 pt-3 border-t border-amber-300 dark:border-amber-600 flex items-center gap-4 text-xs">
                                         <span className="text-amber-800 dark:text-amber-300 font-semibold">
-                                            {isAllVenues
+                                            {isAllVenues || isGroupFilter
                                                 ? `Summary: ${displayedWarnings.length} dari ${totalVenueCount} venue belum mencapai target weekend`
                                                 : `Summary: ${venueWeekendWarnings.totalWeekends - displayedWarnings[0].missing.length}/${venueWeekendWarnings.totalWeekends} weekend tercapai`}
                                         </span>
                                         <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                                            isAllVenues
+                                            isAllVenues || isGroupFilter
                                                 ? displayedWarnings.length <= 2
                                                     ? 'bg-amber-200 text-amber-800'
                                                     : displayedWarnings.length <= 5
@@ -1146,7 +1191,7 @@ const CalendarEventView: React.FC<CalendarEventViewProps> = ({ userRole, venueNa
                                                     ? 'bg-amber-200 text-amber-800'
                                                     : 'bg-red-100 text-red-800'
                                         }`}>
-                                            {isAllVenues
+                                            {isAllVenues || isGroupFilter
                                                 ? `${totalVenueCount - displayedWarnings.length}/${totalVenueCount} venue OK`
                                                 : `${displayedWarnings[0].missing.length} weekend belum tercapai`}
                                         </span>

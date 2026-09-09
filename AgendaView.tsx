@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { CalendarEventEntry, EventStatus } from './types';
 import { WaktuMalamIcon, WaktuPagiIcon, WaktuFullDayIcon } from './Icons';
 import { dateUtils } from './dateUtils';
+import { getBrandLabel } from './constants';
 
 const VENUE_COLORS = [
     '#3B82F6', '#8B5CF6', '#EC4899', '#6366F1',
@@ -119,6 +120,11 @@ const AgendaView: React.FC<AgendaViewProps> = ({ currentDate, events, onEventCli
                                                         )}
                                                     </div>
                                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-[var(--color-text-secondary)]">
+                                                        {getBrandLabel(event.venueName) && (
+                                                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-violet-100 text-violet-700 flex-shrink-0">
+                                                                {getBrandLabel(event.venueName)}
+                                                            </span>
+                                                        )}
                                                         <span className="flex items-center gap-1">
                                                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }}></span>
                                                             {event.venueName}

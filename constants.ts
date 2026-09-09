@@ -134,9 +134,48 @@ export const VENUES: Venue[] = [
         spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1SP1kId9tPv78lbUdg3XnfQpsK_jNczhxzH5fGIbq0gc/edit?usp=sharing',
         publishedCsvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQjvxeeXlUrEiFstebxbxGnHiZWSaHZ6fEDglgxi8YM-va4SlTuapNEO3373sku58EESg6ftod20tfK/pubhtml',
     },
-    { 
+    {
         name: 'Swasana Granadi',
         spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?usp=sharing',
         publishedCsvUrl: 'https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_CSV_URL/pubhtml',
-    }
+    },
+    {
+        name: 'Gunawarman Patrajasa',
+        spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?usp=sharing',
+        publishedCsvUrl: 'https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_CSV_URL/pubhtml',
+    },
+    {
+        name: 'Gunawarman Graha Paramita',
+        spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?usp=sharing',
+        publishedCsvUrl: 'https://docs.google.com/spreadsheets/d/e/YOUR_PUBLISHED_CSV_URL/pubhtml',
+    },
 ];
+
+export const VENUE_GROUPS: Record<string, { label: string; venues: string[] }> = {
+    'group:patrajasa': {
+        label: 'Patrajasa',
+        venues: ['Swasana Patrajasa', 'Gunawarman Patrajasa'],
+    },
+    'group:paramita': {
+        label: 'Paramita',
+        venues: ['Pakubuwono', 'Gunawarman Graha Paramita'],
+    },
+};
+
+export function getBrandLabel(venueName: string): string | null {
+    for (const group of Object.values(VENUE_GROUPS)) {
+        if (group.venues.includes(venueName)) {
+            if (venueName.startsWith('Swasana ')) return 'Swasana';
+            if (venueName.startsWith('Gunawarman ')) return 'Gunawarman';
+            if (venueName === 'Pakubuwono') return 'Pakubuwono';
+            return venueName;
+        }
+    }
+    return null;
+}
+
+export function resolveVenueFilter(value: string): string[] | null {
+    const group = VENUE_GROUPS[value];
+    if (group) return group.venues;
+    return null;
+}

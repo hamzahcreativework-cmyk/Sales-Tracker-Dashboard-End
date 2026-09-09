@@ -4,6 +4,7 @@ import { CloseIcon, TrashIcon } from './Icons';
 import { supabase } from './supabaseClient';
 import { useVenues } from './VenueContext';
 import { dateUtils } from './dateUtils';
+import { getBrandLabel } from './constants';
 
 interface EventDetailModalProps {
     event: CalendarEventEntry;
@@ -215,7 +216,14 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onU
                             <input id="namaClient" name="namaClient" type="text" value={formData.namaClient} onChange={handleInputChange} className="w-full form-input px-4 py-2.5" required readOnly={isReadOnly} />
                         </div>
                          <div>
-                            <label htmlFor="namaVenue" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Nama Venue</label>
+                            <label htmlFor="namaVenue" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                                Nama Venue
+                                {getBrandLabel(formData.namaVenue) && (
+                                    <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold rounded bg-violet-100 text-violet-700">
+                                        Brand: {getBrandLabel(formData.namaVenue)}
+                                    </span>
+                                )}
+                            </label>
                             <select id="namaVenue" name="namaVenue" value={formData.namaVenue} onChange={handleInputChange} className="w-full form-select px-4 py-2.5" required disabled={isReadOnly}>
                                 {VENUES.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
                             </select>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CalendarEventEntry, EventStatus } from './types';
 import { CloseIcon } from './Icons';
 import { dateUtils } from './dateUtils';
+import { getBrandLabel } from './constants';
 
 interface CalendarGridProps {
     currentDate: Date;
@@ -96,6 +97,11 @@ const MoreEventsModal: React.FC<{
                                     <WaktuPill waktuAcara={event.waktuAcara} size="md" />
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    {getBrandLabel(event.venueName || '') && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-violet-100 text-violet-700 flex-shrink-0">
+                                            {getBrandLabel(event.venueName || '')}
+                                        </span>
+                                    )}
                                     <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
                                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: venueColor }} />
                                         {event.venueName}
@@ -245,6 +251,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, events, onDate
                                                 </div>
                                                 <div className="flex items-center gap-1 flex-wrap">
                                                     <WaktuPill waktuAcara={event.waktuAcara} />
+                                                    {getBrandLabel(event.venueName || '') && (
+                                                        <span className="px-1 py-0.5 text-[8px] font-bold rounded bg-violet-100 text-violet-700 flex-shrink-0">
+                                                            {getBrandLabel(event.venueName || '')}
+                                                        </span>
+                                                    )}
                                                     <span className="flex items-center gap-0.5 min-w-0">
                                                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: getVenueColor(event.venueName || '') }} />
                                                         <span className="truncate text-[9px] text-[var(--color-text-secondary)] max-w-[60px]">{event.venueName}</span>

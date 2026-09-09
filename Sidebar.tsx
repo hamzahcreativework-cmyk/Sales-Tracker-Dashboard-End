@@ -5,6 +5,7 @@ import {
 import { ActiveView } from './App';
 import { UserRole } from './types';
 import { useVenues } from './VenueContext';
+import { VENUE_GROUPS } from './constants';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -54,6 +55,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
         }
         return venues;
     }, [userRole, assignedVenue, venues]);
+
+    const groupedVenueNames = useMemo(() => new Set(Object.values(VENUE_GROUPS).flatMap(g => g.venues)), []);
+    const ungroupedVenues = useMemo(() => displayedVenues.filter(v => !groupedVenueNames.has(v.name)), [displayedVenues, groupedVenueNames]);
 
     const sidebarContent = (
         <>
@@ -142,7 +146,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen, activeView, setAct
                                         <span>Semua Venue</span>
                                     </a>
                                 )}
-                                {displayedVenues.map(venue => (
+                                {!assignedVenue && Object.entries(VENUE_GROUPS).map(([key, group]) => (
+                                    <a href="#" key={key} onClick={(e) => { e.preventDefault(); setActiveView({ type: 'CalendarEvent', venueName: key }) }}
+                                        className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && activeView.venueName === key ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
+                                        <span>{group.label}</span>
+                                    </a>
+                                ))}
+                                {ungroupedVenues.map(venue => (
                                     <a href="#" key={venue.name} onClick={(e) => { e.preventDefault(); setActiveView({ type: 'CalendarEvent', venueName: venue.name }) }}
                                         className={`flex items-center h-8 text-xs transition-colors duration-200 rounded-md group my-0.5 px-3 ${isCalendarActive && activeView.venueName === venue.name ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-interactive)] hover:text-[var(--color-text-primary)]'}`}>
                                         <span>{venue.name}</span>
