@@ -292,7 +292,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                         </div>
                          <div>
                             <label htmlFor="namaVenue" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Nama Venue</label>
-                            <select id="namaVenue" value={namaVenue} onChange={e => setNamaVenue(e.target.value)} className="w-full form-select px-4 py-2.5" required disabled={!!preselectedVenue}>
+                            <select id="namaVenue" value={namaVenue} onChange={e => setNamaVenue(e.target.value)} className="w-full form-select px-4 py-2.5" required>
                                 {VENUES.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
                             </select>
                         </div>
