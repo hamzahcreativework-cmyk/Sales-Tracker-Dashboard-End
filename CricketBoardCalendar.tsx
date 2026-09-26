@@ -1453,6 +1453,7 @@ const CricketBoardCalendar: React.FC = () => {
         startMonth: number; startYear: number; endMonth: number; endYear: number;
     } | null>(null);
     const [allVenueNames, setAllVenueNames] = useState<string[]>([]);
+    const [venueFilter, setVenueFilter] = useState<string>('');
     const [headingFont, setHeadingFont] = useState('Orbitron');
     const [bodyFont, setBodyFont] = useState('Poppins');
     const [customFonts, setCustomFonts] = useState<{ name: string; url: string }[]>([]);
@@ -1953,8 +1954,11 @@ const CricketBoardCalendar: React.FC = () => {
         }
     }
 
+    // Filter deals by selected venue
+    const filteredDeals = venueFilter ? deals.filter(d => d.namaVenue === venueFilter) : deals;
+
     // Deals indexed by date
-    const dealsByDate = deals.reduce<Record<string, DealingEntry[]>>((acc, deal) => {
+    const dealsByDate = filteredDeals.reduce<Record<string, DealingEntry[]>>((acc, deal) => {
         const d = deal.tanggalAcara;
         if (!acc[d]) acc[d] = [];
         acc[d].push(deal);
@@ -1972,7 +1976,7 @@ const CricketBoardCalendar: React.FC = () => {
     });
 
     // ── Monthly stats ─────────────────────────────────────────────────────
-    const monthDeals = deals.filter(d => {
+    const monthDeals = filteredDeals.filter(d => {
         const [y, m] = d.tanggalAcara.split('-').map(Number);
         return y === currentYear && m === currentMonth + 1;
     });
@@ -2171,6 +2175,29 @@ const CricketBoardCalendar: React.FC = () => {
                     {bgMusicUrls.length > 0 && <MusicPlayer musicUrls={bgMusicUrls} />}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {/* Venue filter */}
+                    <select
+                        value={venueFilter}
+                        onChange={(e) => setVenueFilter(e.target.value)}
+                        style={{
+                            ...S.orbitron,
+                            backgroundColor: S.surfaceRaw,
+                            border: S.border,
+                            color: venueFilter ? S.gold : '#9CA3AF',
+                            borderRadius: 8,
+                            padding: '6px 10px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.05em',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <option value="">SEMUA VENUE</option>
+                        {allVenueNames.map(venue => (
+                            <option key={venue} value={venue}>{venue.toUpperCase()}</option>
+                        ))}
+                    </select>
+
                     {/* Mode toggle */}
                     <div style={{
                         display: 'flex',
@@ -2286,7 +2313,7 @@ const CricketBoardCalendar: React.FC = () => {
                             <TanggalCantik
                                 year={currentYear}
                                 month={currentMonth}
-                                deals={deals}
+                                deals={filteredDeals}
                                 onSelectDate={(dateStr) => setCompactDate(dateStr)}
                                 baseDelay={0.25}
                             />
@@ -2415,7 +2442,7 @@ const CricketBoardCalendar: React.FC = () => {
                         <TanggalCantik
                             year={currentYear}
                             month={currentMonth}
-                            deals={deals}
+                            deals={filteredDeals}
                             onSelectDate={(dateStr) => setCalendarDate(dateStr)}
                             baseDelay={0.25}
                         />
