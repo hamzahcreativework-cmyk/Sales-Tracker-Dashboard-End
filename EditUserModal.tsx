@@ -98,6 +98,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, onSave, 
                                 title={isEditingSelf ? "Anda tidak dapat mengubah role Anda sendiri." : "Pilih role"}
                             >
                                 <option value="User">User (Hanya Lihat)</option>
+                                <option value="Viewer">Viewer (Read-Only)</option>
                                 <option value="Manager">Manager (Edit & Tambah)</option>
                                 <option value="Admin">Admin (Full Access)</option>
                                 <option value="Direktor">Direktor</option>

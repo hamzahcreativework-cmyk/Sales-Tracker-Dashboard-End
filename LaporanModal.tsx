@@ -225,7 +225,7 @@ const LaporanModal: React.FC<LaporanModalProps> = ({ isOpen, onClose, marketingN
                     >
                         Kembali
                     </button>
-                    {userRole !== 'Direktor' && (
+                    {userRole !== 'Direktor' && userRole !== 'Viewer' && (
                         <button 
                             onClick={() => handleSave(reports)}
                             className="btn-primary py-2.5 px-8"

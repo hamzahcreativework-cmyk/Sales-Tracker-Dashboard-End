@@ -644,7 +644,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
                         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">Venue</h1>
                         <p className="text-[var(--color-text-secondary)]">Pilih venue untuk melihat detail</p>
                     </div>
-                    {(userRole === 'Admin' || userRole === 'IT') && (
+                    {(userRole === 'Admin' || userRole === 'IT') && userRole !== 'Viewer' && (
                         <button
                             onClick={() => setIsAddVenueModalOpen(true)}
                             className="btn-primary py-2.5 px-5 flex items-center"
@@ -661,7 +661,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ setActiveView, userRole, 
                             className="card p-6 cursor-pointer transform group relative"
                             onClick={() => setActiveView({ type: 'VenueDetail', venueName: venue.name })}
                         >
-                            {(userRole === 'Admin' || userRole === 'IT') && venue.id && (
+                            {(userRole === 'Admin' || userRole === 'IT') && userRole !== 'Viewer' && venue.id && (
                                 <button
                                     onClick={async (e) => {
                                         e.stopPropagation();
@@ -1114,7 +1114,7 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                             <span className="hidden sm:inline">CSV</span>
                         </button>
 
-                        {(userRole === 'Admin' || userRole === 'Manager') && (
+                        {(userRole === 'Admin' || userRole === 'Manager') && userRole !== 'Viewer' && (
                             <>
                                 {selectedDeals.size > 0 && (
                                     <button
@@ -1279,22 +1279,24 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                                             className="text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] p-1 rounded-full hover:bg-gray-50 transition-colors" aria-label={`Edit ${deal.namaClient}`}>
                                                             <EditIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={async () => {
-                                                                if (window.confirm(`Hapus deal untuk ${deal.namaClient}?`)) {
-                                                                    const { error } = await supabase.from('deals').delete().eq('id', deal.id);
-                                                                    if (error) {
-                                                                        alert('Gagal menghapus deal.');
-                                                                    } else {
-                                                                        setDeals(prev => prev.filter(d => d.id !== deal.id));
+                                                        {userRole !== 'Viewer' && (
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (window.confirm(`Hapus deal untuk ${deal.namaClient}?`)) {
+                                                                        const { error } = await supabase.from('deals').delete().eq('id', deal.id);
+                                                                        if (error) {
+                                                                            alert('Gagal menghapus deal.');
+                                                                        } else {
+                                                                            setDeals(prev => prev.filter(d => d.id !== deal.id));
+                                                                        }
                                                                     }
-                                                                }
-                                                            }}
-                                                            className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1 rounded-full hover:bg-red-50 transition-colors"
-                                                            aria-label={`Delete ${deal.namaClient}`}
-                                                        >
-                                                            <TrashIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                        </button>
+                                                                }}
+                                                                className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-1 rounded-full hover:bg-red-50 transition-colors"
+                                                                aria-label={`Delete ${deal.namaClient}`}
+                                                            >
+                                                                <TrashIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             )}
@@ -1345,22 +1347,24 @@ const DataDealingView: React.FC<{ userRole: UserRole; assignedVenue: string | nu
                                                 >
                                                     <EditIcon className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={async () => {
-                                                        if (window.confirm(`Hapus deal untuk ${deal.namaClient}?`)) {
-                                                            const { error } = await supabase.from('deals').delete().eq('id', deal.id);
-                                                            if (error) {
-                                                                alert('Gagal menghapus deal.');
-                                                            } else {
-                                                                setDeals(prev => prev.filter(d => d.id !== deal.id));
+                                                {userRole !== 'Viewer' && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (window.confirm(`Hapus deal untuk ${deal.namaClient}?`)) {
+                                                                const { error } = await supabase.from('deals').delete().eq('id', deal.id);
+                                                                if (error) {
+                                                                    alert('Gagal menghapus deal.');
+                                                                } else {
+                                                                    setDeals(prev => prev.filter(d => d.id !== deal.id));
+                                                                }
                                                             }
-                                                        }
-                                                    }}
-                                                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-2 rounded-full hover:bg-red-50 transition-colors"
-                                                    aria-label={`Delete ${deal.namaClient}`}
-                                                >
-                                                    <TrashIcon className="w-4 h-4" />
-                                                </button>
+                                                        }}
+                                                        className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] p-2 rounded-full hover:bg-red-50 transition-colors"
+                                                        aria-label={`Delete ${deal.namaClient}`}
+                                                    >
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1607,7 +1611,7 @@ const VenueDetailView: React.FC<VenueDetailViewProps> = ({ venueName, setLaporan
                             Spreadsheet
                         </a>
                     )}
-                    {userRole !== 'Direktor' && (
+                    {userRole !== 'Direktor' && userRole !== 'Viewer' && (
                         <>
                             {selectedEmployeeIds.size > 0 && (
                                 <button

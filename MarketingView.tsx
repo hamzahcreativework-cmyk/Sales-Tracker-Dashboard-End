@@ -306,12 +306,14 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                 <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
                     Marketing Menu {assignedVenue ? `- ${assignedVenue}` : ''}
                 </h1>
-                <button
-                    onClick={() => setIsInputModalOpen(true)}
-                    className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors shadow-sm font-medium flex items-center gap-2"
-                >
-                    <span className="text-lg">+</span> Tambah Data
-                </button>
+                {userRole !== 'Viewer' && (
+                    <button
+                        onClick={() => setIsInputModalOpen(true)}
+                        className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors shadow-sm font-medium flex items-center gap-2"
+                    >
+                        <span className="text-lg">+</span> Tambah Data
+                    </button>
+                )}
             </div>
 
             {/* Tabs */}
@@ -361,13 +363,15 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                         <div className="flex gap-2">
                             {isEditingMode ? (
                                 <>
-                                    <button
-                                        onClick={handleSaveBulkEdit}
-                                        disabled={isLoading}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 text-sm font-medium"
-                                    >
-                                        <SuccessIcon className="w-4 h-4" /> Simpan
-                                    </button>
+                                    {userRole !== 'Viewer' && (
+                                        <button
+                                            onClick={handleSaveBulkEdit}
+                                            disabled={isLoading}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-primary)] text-white rounded hover:bg-[var(--color-primary)]/90 text-sm font-medium"
+                                        >
+                                            <SuccessIcon className="w-4 h-4" /> Simpan
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleCancelEdit}
                                         className="flex items-center gap-1 px-3 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium"
@@ -377,18 +381,22 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                                 </>
                             ) : (
                                 <>
-                                    <button
-                                        onClick={handleStartBulkEdit}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-medium"
-                                    >
-                                        <EditIcon className="w-4 h-4" /> Edit ({selectedIds.size})
-                                    </button>
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-medium"
-                                    >
-                                        <TrashIcon className="w-4 h-4" /> Hapus ({selectedIds.size})
-                                    </button>
+                                    {userRole !== 'Viewer' && (
+                                        <button
+                                            onClick={handleStartBulkEdit}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-medium"
+                                        >
+                                            <EditIcon className="w-4 h-4" /> Edit ({selectedIds.size})
+                                        </button>
+                                    )}
+                                    {userRole !== 'Viewer' && (
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-medium"
+                                        >
+                                            <TrashIcon className="w-4 h-4" /> Hapus ({selectedIds.size})
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -655,13 +663,15 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                                                     </select>
                                                 </td>
                                                 <td className="px-4 py-2 text-center">
-                                                    <button
-                                                        onClick={() => handleRemoveRow(index)}
-                                                        className="text-red-500 hover:text-red-700 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 transition-colors"
-                                                        title="Hapus Baris"
-                                                    >
-                                                        ✕
-                                                    </button>
+                                                    {userRole !== 'Viewer' && (
+                                                        <button
+                                                            onClick={() => handleRemoveRow(index)}
+                                                            className="text-red-500 hover:text-red-700 w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 transition-colors"
+                                                            title="Hapus Baris"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -669,12 +679,14 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                                 </table>
                             </div>
                             <div className="mt-4 flex justify-between items-center">
-                                <button
-                                    onClick={handleAddRow}
-                                    className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 font-medium text-sm flex items-center px-3 py-2 rounded hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-border)] transition-all"
-                                >
-                                    <span className="mr-1 text-lg">+</span> Tambah Baris
-                                </button>
+                                {userRole !== 'Viewer' && (
+                                    <button
+                                        onClick={handleAddRow}
+                                        className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 font-medium text-sm flex items-center px-3 py-2 rounded hover:bg-[var(--color-surface)] border border-transparent hover:border-[var(--color-border)] transition-all"
+                                    >
+                                        <span className="mr-1 text-lg">+</span> Tambah Baris
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="p-6 border-t border-[var(--color-border)] bg-[var(--color-surface)] rounded-b-xl flex justify-end gap-3">
@@ -684,13 +696,15 @@ const MarketingView: React.FC<MarketingViewProps> = ({ userRole, assignedVenue }
                             >
                                 Batal
                             </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={isLoading}
-                                className={`px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors shadow-sm font-medium ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {isLoading ? 'Menyimpan...' : 'Simpan Semua Data'}
-                            </button>
+                            {userRole !== 'Viewer' && (
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isLoading}
+                                    className={`px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors shadow-sm font-medium ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {isLoading ? 'Menyimpan...' : 'Simpan Semua Data'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

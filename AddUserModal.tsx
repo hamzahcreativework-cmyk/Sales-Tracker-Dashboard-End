@@ -103,6 +103,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, is
                                 className="w-full px-3 py-2 form-select"
                             >
                                 <option value="User">User (Hanya Lihat)</option>
+                                <option value="Viewer">Viewer (Read-Only)</option>
                                 <option value="Manager">Manager (Edit & Tambah)</option>
                                 <option value="Admin">Admin (Full Access)</option>
                                 <option value="Direktor">Direktor</option>
@@ -150,3 +151,5 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onSave, is
 };
 
 export default AddUserModal;
+
+

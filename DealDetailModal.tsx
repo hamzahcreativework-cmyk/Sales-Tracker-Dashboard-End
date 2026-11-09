@@ -36,7 +36,7 @@ const DealDetailModal: React.FC<DealDetailModalProps> = ({ deal, onClose, onDeal
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
-    const isReadOnly = userRole === 'Direktor' || userRole === 'User';
+    const isReadOnly = userRole === 'Direktor' || userRole === 'User' || userRole === 'Viewer';
 
     const fetchMarketingOptions = useCallback(async (venueName: string) => {
         const { data, error } = await supabase.from('marketing_staff').select('name').eq('venueName', venueName);

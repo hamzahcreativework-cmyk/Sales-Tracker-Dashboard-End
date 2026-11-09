@@ -155,6 +155,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
             alert('Harap isi semua field yang wajib diisi.');
             return;
         }
+        // Viewers are strictly read-only and must never be able to create an event
+        if (userRole === 'Viewer') {
+            alert('Akun Viewer bersifat read-only dan tidak dapat menambahkan event.');
+            return;
+        }
+
         // Prevent users with role 'User' from adding a second Booking for the same venue/date/time
         if (userRole === 'User') {
             try {

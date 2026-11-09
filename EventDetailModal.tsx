@@ -34,7 +34,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onU
     });
     const [marketingOptions, setMarketingOptions] = useState<MarketingPerson[]>([]);
     const [isSaving, setIsSaving] = useState(false);
-    const isReadOnly = userRole === 'Direktor' || userRole === 'User';
+    const isReadOnly = userRole === 'Direktor' || userRole === 'User' || userRole === 'Viewer';
 
     const formattedDate = (() => {
         const dateStr = formData.tanggalAcara || event.eventDate;
@@ -210,7 +210,7 @@ const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onU
                 </div>
                 
                 <div className="overflow-y-auto pr-2 -mr-4 flex-grow">
-                     <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                     <form onSubmit={(e) => { e.preventDefault(); if (!isReadOnly) handleSave(); }} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                         <div className="md:col-span-2">
                             <label htmlFor="namaClient" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Nama Client / Event</label>
                             <input id="namaClient" name="namaClient" type="text" value={formData.namaClient} onChange={handleInputChange} className="w-full form-input px-4 py-2.5" required readOnly={isReadOnly} />

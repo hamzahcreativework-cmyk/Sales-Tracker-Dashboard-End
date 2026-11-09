@@ -16,7 +16,7 @@ const LaporanDatabaseView: React.FC<LaporanDatabaseViewProps> = ({ data, onDataC
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [bulkEditField, setBulkEditField] = useState<keyof LaporanDatabaseEntry | ''>('');
     const [bulkEditValue, setBulkEditValue] = useState<string>('');
-    const isReadOnly = userRole === 'Direktor';
+    const isReadOnly = userRole === 'Direktor' || userRole === 'Viewer';
 
     const handleInputChange = (index: number, field: keyof LaporanDatabaseEntry, value: string) => {
         const updatedData = data.map((row, i) =>
