@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './supabaseClient';
 import { dateUtils } from './dateUtils';
@@ -1954,6 +1954,12 @@ const CricketBoardCalendar: React.FC = () => {
         }
     }
 
+    // Venue names for the filter dropdown: venues table + any venue names only present on deals
+    const venueFilterOptions = useMemo(() => {
+        const dealVenueNames = deals.map(d => d.namaVenue).filter(Boolean);
+        return Array.from(new Set([...allVenueNames, ...dealVenueNames])).sort();
+    }, [allVenueNames, deals]);
+
     // Filter deals by selected venue
     const filteredDeals = venueFilter ? deals.filter(d => d.namaVenue === venueFilter) : deals;
 
@@ -2193,7 +2199,7 @@ const CricketBoardCalendar: React.FC = () => {
                         }}
                     >
                         <option value="">SEMUA VENUE</option>
-                        {allVenueNames.map(venue => (
+                        {venueFilterOptions.map(venue => (
                             <option key={venue} value={venue}>{venue.toUpperCase()}</option>
                         ))}
                     </select>
